@@ -1,0 +1,981 @@
+<title>Transport Booking Admin</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: dark teal sidebar + context bar (who am I / which supplier) + work area with list tables and right-hand drawers. */
+:root{
+  --bg:#f1f5f5;--surface:#ffffff;--surface2:#f6f9f9;--line:#dce4e4;--line2:#c6d2d2;
+  --fg:#13201f;--muted:#586a69;--accent:#0b6e66;--accent-fg:#ffffff;--accent-soft:#dcf0ed;
+  --ok:#1b7443;--ok-soft:#dff2e6;--warn:#8f5600;--warn-soft:#faedd0;--bad:#b3261e;--bad-soft:#fbe3e0;--info:#2457a6;--info-soft:#e1ebfa;
+  --side-bg:#0f1f1e;--side-fg:#e4eeed;--side-mut:#8ea4a2;--side-act:#1c3a37;--side-line:#223a38;
+  --shadow:0 12px 40px rgba(8,28,27,.22);--scrim:rgba(8,20,20,.45);
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  --gutter-l:max(16px,env(safe-area-inset-left,0px));--gutter-r:max(16px,env(safe-area-inset-right,0px));
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b1413;--surface:#111d1c;--surface2:#152423;--line:#223533;--line2:#2f4745;
+  --fg:#e3eeed;--muted:#93a8a6;--accent:#3cc3b2;--accent-fg:#052421;--accent-soft:#143a37;
+  --ok:#5fd18d;--ok-soft:#133423;--warn:#f0b24d;--warn-soft:#3a2a0d;--bad:#ff8a80;--bad-soft:#3d1a17;--info:#8db6ff;--info-soft:#16284a;
+  --side-bg:#071110;--side-fg:#e0ebea;--side-mut:#85a09d;--side-act:#143130;--side-line:#1a2f2d;
+  --shadow:0 12px 40px rgba(0,0,0,.6);--scrim:rgba(0,0,0,.6);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1413;--surface:#111d1c;--surface2:#152423;--line:#223533;--line2:#2f4745;
+  --fg:#e3eeed;--muted:#93a8a6;--accent:#3cc3b2;--accent-fg:#052421;--accent-soft:#143a37;
+  --ok:#5fd18d;--ok-soft:#133423;--warn:#f0b24d;--warn-soft:#3a2a0d;--bad:#ff8a80;--bad-soft:#3d1a17;--info:#8db6ff;--info-soft:#16284a;
+  --side-bg:#071110;--side-fg:#e0ebea;--side-mut:#85a09d;--side-act:#143130;--side-line:#1a2f2d;
+  --shadow:0 12px 40px rgba(0,0,0,.6);--scrim:rgba(0,0,0,.6);color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono);font-size:12.5px}
+.muted{color:var(--muted)}
+.app{display:grid;grid-template-columns:244px minmax(0,1fr);min-height:100dvh}
+/* sidebar */
+.side{background:var(--side-bg);color:var(--side-fg);position:sticky;top:0;height:100dvh;overflow-y:auto;padding:18px 12px 24px;padding-left:max(12px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 8px 14px;font-weight:600;font-size:15px;letter-spacing:.01em}
+.brand i{width:26px;height:26px;border-radius:7px;background:var(--accent);display:grid;place-items:center;color:var(--accent-fg);font-style:normal;font-family:var(--mono);font-weight:500;font-size:13px}
+.brand small{display:block;font-weight:400;color:var(--side-mut);font-size:11px;letter-spacing:.04em}
+.gl{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--side-mut);padding:14px 10px 5px}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:0;background:none;color:var(--side-fg);text-align:left;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13.5px}
+.nav:hover{background:var(--side-line)}
+.nav[aria-current="page"]{background:var(--side-act);box-shadow:inset 2px 0 0 var(--accent)}
+.nav .n{font-family:var(--mono);font-size:11px;color:var(--side-mut)}
+.nav.ro::after{content:"read-only";font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--side-mut);border:1px solid var(--side-line);border-radius:4px;padding:0 4px}
+/* main */
+.mainwrap{min-width:0;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border-bottom:1px solid var(--line);padding:10px var(--gutter-r) 10px var(--gutter-l);position:sticky;top:env(safe-area-inset-top,0px);z-index:20}
+.top .grow{flex:1}
+.btn.menu{display:none}
+.ctl{display:flex;align-items:center;gap:6px;min-width:0}
+.ctl label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+select,input[type=text],input[type=search],input[type=number],input[type=date],input[type=time],input[type=email],input[type=datetime-local],textarea{background:var(--surface);border:1px solid var(--line2);border-radius:6px;padding:6px 9px;min-width:0;max-width:100%}
+select{padding-right:4px}
+textarea{width:100%;resize:vertical;min-height:70px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:999px;padding:3px 10px;font-size:12px;background:var(--surface2)}
+.demo{background:var(--warn-soft);color:var(--warn);border-color:transparent;font-weight:500}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line2);background:var(--surface);border-radius:6px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--surface2)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:500}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn.bad{color:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:3px 8px;font-size:12.5px}
+.btn.ghost{border-color:transparent;background:none}
+.btn.ghost:hover{background:var(--surface2);border-color:var(--line)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.main{padding:22px var(--gutter-r) 60px var(--gutter-l);max-width:1280px;width:100%}
+h1{font-size:21px;font-weight:600;margin:0;letter-spacing:-.005em;text-wrap:balance}
+h2{font-size:14px;font-weight:600;margin:0}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.ph p{margin:3px 0 0;color:var(--muted)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.pad{padding:14px 16px}
+.note{border:1px solid var(--line);background:var(--info-soft);color:var(--info);border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:13px}
+.note.w{background:var(--warn-soft);color:var(--warn)}
+/* toolbar + table */
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.tools input[type=search]{flex:1 1 200px;max-width:320px}
+.tw{overflow-x:auto;border-radius:10px 10px 0 0}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:500;background:var(--surface2);white-space:nowrap;position:sticky;top:0}
+th button{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+th button:focus-visible{outline:2px solid var(--accent)}
+td{font-size:13.5px}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--surface2)}
+tr.del td{color:var(--muted);text-decoration:line-through}
+tr.del td:last-child,tr.del td:first-child{text-decoration:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td.act{white-space:nowrap;text-align:right}
+td.cl{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{display:inline-block;border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:500;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.off{background:var(--surface2);color:var(--muted);border:1px solid var(--line2)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.info{background:var(--info-soft);color:var(--info)}
+.tag{font-family:var(--mono);font-size:11.5px;background:var(--surface2);border:1px solid var(--line);border-radius:4px;padding:0 5px}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;border-top:0;font-size:12.5px;color:var(--muted)}
+.bulk{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--accent-soft);border-radius:8px;padding:6px 10px;margin-bottom:10px}
+.empty{padding:40px 16px;text-align:center;color:var(--muted)}
+/* overlays */
+.ov{position:fixed;inset:0;background:var(--scrim);z-index:50;display:flex;justify-content:flex-end}
+.ov.c{justify-content:center;align-items:center;padding:16px}
+.sheet{background:var(--surface);width:min(620px,100%);height:100%;display:flex;flex-direction:column;box-shadow:var(--shadow);padding-bottom:env(safe-area-inset-bottom,0px)}
+.dlg{background:var(--surface);width:min(520px,100%);max-height:100%;overflow:auto;border-radius:12px;box-shadow:var(--shadow);padding:18px}
+.sh{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.sheet form{display:flex;flex-direction:column;flex:1;min-height:0}
+.sb{flex:1;min-height:0;overflow:auto;padding:16px 18px}
+.sf{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 18px;border-top:1px solid var(--line);padding-right:max(18px,env(safe-area-inset-right,0px))}
+.fld{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.fld label{font-size:12.5px;font-weight:500}
+.fld label b{color:var(--bad);margin-left:2px}
+.fld input,.fld select,.fld textarea{width:100%}
+.fld input[type=checkbox]{width:auto;align-self:flex-start;transform:scale(1.15);margin:4px 0}
+.fld .hint{font-size:12px;color:var(--muted)}
+.err{color:var(--bad);font-size:12px;min-height:0}
+.fld.bad input,.fld.bad select,.fld.bad textarea{border-color:var(--bad)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+fieldset{border:1px solid var(--line);border-radius:8px;margin:0 0 12px;padding:10px 12px;min-width:0}
+legend{font-size:12.5px;font-weight:500;padding:0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:999px;padding:3px 10px;font-size:12.5px;cursor:pointer;background:var(--surface)}
+.chips label:has(input:checked){background:var(--accent-soft);border-color:var(--accent)}
+.dl{display:grid;grid-template-columns:150px minmax(0,1fr);gap:7px 12px;margin:0}
+.dl dt{color:var(--muted);font-size:12.5px}
+.dl dd{margin:0;overflow-wrap:anywhere}
+.sec{margin:18px 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.rel{display:flex;justify-content:space-between;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:6px}
+pre{margin:0;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow:auto;font:12px/1.5 var(--mono);white-space:pre-wrap;word-break:break-word}
+/* dashboard */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.tile{padding:14px 16px}
+.tile .v{font-size:28px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile .l{font-size:12px;color:var(--muted);margin-top:3px}
+.two{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;margin-bottom:14px}
+.bars{display:flex;flex-direction:column;gap:7px}
+.bar{display:grid;grid-template-columns:150px minmax(0,1fr) 34px;gap:8px;align-items:center;font-size:12.5px;background:none;border:0;text-align:left;cursor:pointer;padding:2px 0}
+.bar:hover .tr i{filter:brightness(1.15)}
+.bar .tr{height:9px;background:var(--surface2);border-radius:5px;overflow:hidden;border:1px solid var(--line)}
+.bar .tr i{display:block;height:100%;background:var(--accent);border-radius:5px}
+.bar .c{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.act-row{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;align-items:baseline;flex-wrap:wrap}
+.act-row:last-child{border:0}
+.media{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.mi{overflow:hidden}
+.mi .ph2{aspect-ratio:3/2;display:grid;place-items:center;color:#fff;font-family:var(--mono);font-size:12px;max-width:100%}
+.mi .mb{padding:9px 11px;font-size:12.5px}
+.toasts{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:max(16px,env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:80;max-width:min(380px,calc(100vw - 32px))}
+.toast{background:var(--fg);color:var(--bg);border-radius:8px;padding:9px 13px;box-shadow:var(--shadow);font-size:13px}
+.toast.bad{background:var(--bad);color:#fff}
+.diff{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+tr.sub td{cursor:default;background:var(--surface2)}
+tr.sub:hover{background:var(--surface2)}
+.scrim{display:none}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:fixed;left:0;top:0;bottom:0;width:272px;z-index:60;transform:translateX(-102%);transition:transform .18s}
+  body.nav-open .side{transform:none;box-shadow:var(--shadow)}
+  body.nav-open .scrim{display:block;position:fixed;inset:0;background:var(--scrim);z-index:55}
+  .btn.menu{display:inline-flex}
+  .two{grid-template-columns:minmax(0,1fr)}
+  .bar{grid-template-columns:110px minmax(0,1fr) 30px}
+}
+@media (max-width:520px){
+  .grid2,.diff{grid-template-columns:1fr}
+  .dl{grid-template-columns:1fr;gap:0}
+  .dl dt{margin-top:8px}
+  .top .ctl label{display:none}
+  .ph{flex-direction:column}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.ch{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:2px 4px}
+.cd{min-height:92px;border:1px solid var(--line);border-radius:6px;padding:4px;display:flex;flex-direction:column;gap:2px;min-width:0;background:var(--surface)}
+.cd.off{border:0;background:none}.cd.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.cd b{font-size:12px;color:var(--muted);font-weight:500}
+.ce{all:unset;box-sizing:border-box;cursor:pointer;font-size:11.5px;padding:1px 5px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.ce:focus-visible{outline:2px solid var(--accent)}
+.ce.ok{background:var(--ok-soft);color:var(--ok)}.ce.info{background:var(--info-soft);color:var(--info)}.ce.warn{background:var(--warn-soft);color:var(--warn)}.ce.bad{background:var(--bad-soft);color:var(--bad)}.ce.off{background:var(--surface2);color:var(--muted)}
+@media (max-width:640px){.cd{min-height:64px}.ce{font-size:10px;padding:0 2px}.cal{gap:2px}}
+.dl dd,.rel>span{min-width:0}
+.rel button.btn{flex:none}
+h1{font-size:21px}
+.tile .v{font-size:24px;overflow-wrap:anywhere}
+.tile{min-width:0}
+.login{min-height:100dvh;display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.lcard{width:min(420px,100%);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px;box-shadow:var(--shadow)}
+.lcard .brand{color:var(--fg)}
+.demoacc{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);font-size:13px}
+fieldset[disabled]{opacity:.65}
+.top .chip{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sh .btn.ghost{flex:none}
+.th{width:44px;height:30px;object-fit:cover;border-radius:5px;display:block;background:var(--line)}
+.th.none{display:grid;place-items:center;font-size:9px;color:var(--muted);text-align:center;line-height:1.1;border:1px dashed var(--line)}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.gal figure{margin:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;position:relative;background:var(--surface)}
+.gal img{width:100%;aspect-ratio:5/3;object-fit:cover;display:block}
+.gal figcaption{display:flex;gap:4px;padding:6px;flex-wrap:wrap}
+.gal .cov{position:absolute;top:6px;left:6px;background:var(--accent);color:var(--accent-fg,#fff);font-size:11px;padding:1px 7px;border-radius:99px}
+.gal .addimg{display:grid;place-items:center;min-height:90px;border:1px dashed var(--line);border-radius:8px;cursor:pointer;color:var(--accent);font-weight:500}
+.fld .th{width:100%}
+.pcard{display:flex;gap:12px;margin:8px 0 12px;padding:10px;border:1px solid var(--line);border-radius:10px;align-items:flex-start}
+.pcard img{width:96px;height:64px;object-fit:cover;border-radius:6px;flex:none}
+.pcard p{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+.pcard ul{margin:6px 0 0;padding-left:16px;font-size:12.5px}
+:root{--accent:#b25500;--accent-soft:#fbe6cf;--side-bg:#2a1a0a;--side-act:#4a2f10;--side-line:#553710}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--accent:#ffae5e;--accent-soft:#43290a;--side-bg:#150d04;--side-act:#3d2610;--side-line:#4a2f13;--accent-fg:#06121f}}
+:root[data-theme="dark"]{--accent:#ffae5e;--accent-soft:#43290a;--side-bg:#150d04;--side-act:#3d2610;--side-line:#4a2f13;--accent-fg:#06121f}
+</style>
+<div id="root"></div><div class="toasts" id="toasts" aria-live="polite"></div>
+<script>const APP={"id": "transport", "product": "TRANSPORT", "name": "Transport Admin", "sub": "BOOKING BACK OFFICE", "mark": "TX", "seed": 33, "n": 1};
+/* ---------- seeded demo data (all invented) ---------- */
+const rnd=(function(s){return function(){s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}})(APP.seed);
+const ri=(a,b)=>a+Math.floor(rnd()*(b-a+1)), pick=a=>a[Math.floor(rnd()*a.length)];
+const DAY=864e5, NOW=Date.now();
+const d0=new Date();d0.setHours(0,0,0,0);const T0=d0.getTime();
+const iso=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const dayN=n=>iso(T0+n*DAY);
+const at=(n,hm)=>{const[h,m]=hm.split(':').map(Number);return T0+n*DAY+(h*60+m)*6e4};
+const fmt=n=>'Rp '+Math.round(n).toLocaleString('id-ID');
+const fdate=t=>new Date(t).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+const fdt=t=>new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+const ftime=t=>new Date(t).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const PRODUCTS={HOTEL:{label:'Hotel',pre:'HTL'},TRIP:{label:'Trip',pre:'TRP'},TRANSPORT:{label:'Transport',pre:'TRN'},CLUB:{label:'Club',pre:'CLB'}};
+const SUPPLIERS=[{id:'s1',name:'Ubud Heritage Co.',pct:12.5},{id:'s2',name:'Seminyak Coast Group',pct:10},{id:'s3',name:'Canggu Collective',pct:11}];
+const NAMES=[['Emma Hartley','GB'],['Liam Novak','AU'],['Sofia Marchetti','IT'],['Kenji Watanabe','JP'],['Anna Kowalski','PL'],['Mateo Silva','BR'],['Chloe Bernard','FR'],['Jonas Weber','DE'],['Priya Nair','IN'],['Noah Fischer','CH'],['Mei Lin Tan','SG'],['Olivia Brown','US'],['Lars Eriksen','NO'],['Isabel Ortega','ES'],['Hans Becker','DE'],['Yuki Tanaka','JP'],['Grace Okafor','NG'],['Tom Ridley','GB'],['Sara Lindqvist','SE'],['Diego Alvarez','MX']];
+const SRC=APP.product!=='ALL'?['ADMIN','WEBSITE','CONCIERGE','PHONE','WALK_IN']:['ADMIN','WEBSITE','CONCIERGE','OTA','PHONE','WALK_IN'];
+const SRCL=s=>s==='CONCIERGE'?'guest concierge':s.replace('_',' ').toLowerCase();
+const CAT={
+ HOTEL:{hotel:{ubud:'Ubud Rice Terrace Villa'},rooms:[{id:'r1',name:'Deluxe Pool Villa',price:2450000,max:3,units:8},{id:'r2',name:'Garden Suite',price:1650000,max:2,units:10},{id:'r3',name:'Rice-view Studio',price:980000,max:2,units:12}],plans:[{id:'p1',name:'Room only',add:0},{id:'p2',name:'Bed & breakfast',add:180000},{id:'p3',name:'Half board',add:420000}]},
+ TRIP:{trips:[{id:'t1',name:'Ubud culture day tour',adult:650000,child:400000,quota:12,time:'08:00'},{id:'t2',name:'Sunrise Batur trek',adult:780000,child:520000,quota:10,time:'03:30'},{id:'t3',name:'Nusa Penida day trip',adult:890000,child:600000,quota:14,time:'07:00'}]},
+ TRANSPORT:{services:[{id:'v1',name:'Airport to Ubud',veh:'Sedan',price:450000,max:3},{id:'v2',name:'Airport to Seminyak',veh:'Sedan',price:380000,max:3},{id:'v3',name:'Airport to Canggu',veh:'MPV',price:520000,max:6},{id:'v4',name:'Ubud day charter (8 h)',veh:'MPV',price:850000,max:6},{id:'v5',name:'Airport to Nusa Dua',veh:'Minibus',price:640000,max:12}],
+   drivers:[{id:'d1',name:'Wayan Sudarta',phone:'+62 812 0000 111'},{id:'d2',name:'Made Arsana',phone:'+62 812 0000 222'},{id:'d3',name:'Komang Putra',phone:'+62 812 0000 333'},{id:'d4',name:'Ketut Mahendra',phone:'+62 812 0000 444'}],
+   vehicles:[{id:'c1',plate:'DK 1204 AB',type:'Sedan',d:'d1'},{id:'c2',plate:'DK 8841 CD',type:'MPV',d:'d2'},{id:'c3',plate:'DK 3377 EF',type:'MPV',d:'d3'},{id:'c4',plate:'DK 5120 GH',type:'Minibus',d:'d4'}]},
+ CLUB:{clubs:['Terrace Lounge Ubud'],events:[{id:'e1',name:'Sunset Sessions with live DJ',off:0},{id:'e2',name:'Latin Night',off:2},{id:'e3',name:'Full Moon Party',off:5},{id:'e4',name:'Ladies Night',off:7}],tickets:[{id:'k1',name:'General entry',price:150000,quota:300},{id:'k2',name:'VIP entry',price:450000,quota:80}],tables:[{id:'b1',name:'Sofa table (4 guests)',price:2500000,cap:4,quota:12},{id:'b2',name:'Bottle service (8 guests)',price:6500000,cap:8,quota:6}]}
+};
+function money(b){b.subtotal=b.lines.filter(l=>l.type!=='DISCOUNT').reduce((a,l)=>a+l.amount,0);b.discount=b.lines.filter(l=>l.type==='DISCOUNT').reduce((a,l)=>a+l.amount,0);}
+function totals(sub,disc,svcPct,taxPct){taxPct=taxPct==null?11:taxPct;const base=sub-disc;const svc=Math.round(base*svcPct/100);const tax=Math.round((base+svc)*taxPct/100);return{service:svc,tax,total:base+svc+tax};}
+function payStatus(b){const pay=b.payments.filter(p=>p.kind==='PAYMENT'&&p.tx==='SUCCEEDED').reduce((a,p)=>a+p.amount,0);const ref=b.payments.filter(p=>p.kind==='REFUND'&&p.tx==='SUCCEEDED').reduce((a,p)=>a+p.amount,0);b.paid=pay-ref;
+  b.pay=ref>0?(pay-ref<=0?'REFUNDED':'PARTIALLY_REFUNDED'):pay<=0?'UNPAID':pay<b.total-0.5?'PARTIAL':'PAID';}
+let SEQ={};
+function bookingNo(p,sup,t){const k=p+sup+iso(t).slice(0,7);SEQ[k]=(SEQ[k]||0)+1;const d=new Date(t);return PRODUCTS[p].pre+'-'+String(d.getFullYear()).slice(2)+String(d.getMonth()+1).padStart(2,'0')+'-'+String(SEQ[k]).padStart(4,'0')}
+function mk(p,sup,i){
+  const [gn,cc]=pick(NAMES);const roll=rnd();
+  let st=roll<.12?'PENDING':roll<.5?'CONFIRMED':roll<.72?'COMPLETED':roll<.84?'CANCELLED':roll<.9?'NO_SHOW':'EXPIRED';
+  const src=pick(SRC);if(src==='CONCIERGE'&&rnd()<.6)st='PENDING';
+  let off;
+  if(st==='COMPLETED'||st==='NO_SHOW')off=-ri(1,24);else if(st==='PENDING')off=ri(2,25);else if(st==='EXPIRED')off=ri(1,15);else if(st==='CANCELLED')off=ri(-10,22);else off=ri(-2,22);
+  if(p==='HOTEL'&&st==='CONFIRMED'&&rnd()<.35)off=-ri(1,2);
+  if(p==='TRANSPORT'&&st==='CONFIRMED'&&rnd()<.4)off=ri(0,1);
+  if(p==='CLUB'&&st==='CONFIRMED'&&rnd()<.35)off=0;
+  if(p==='TRIP'&&st==='CONFIRMED'&&rnd()<.3)off=ri(0,1);
+  if(src==='CONCIERGE'&&st==='PENDING')off=ri(0,3);
+  const created=Math.min(NOW-ri(3,500)*6e4*6, at(off,'09:00')-ri(1,20)*DAY);
+  const b={id:'b'+(APP.n++),product:p,status:st,source:src,guest:gn,email:gn.toLowerCase().replace(/[^a-z]+/g,'.')+'@example.test',phone:'+'+ri(30,99)+' '+ri(100,999)+' '+ri(1000,9999),country:cc,supplier:sup,created,lines:[],payments:[],events:[],notes:[],guests:[{name:gn,type:'ADULT',lead:true}],special:rnd()<.3?pick(['Late arrival','Vegetarian meals','Celebrating an anniversary','High floor please','Child seat needed']):'' ,hold:null,deleted:false,item:{}};
+  if(src==='CONCIERGE'){const vis=rnd()<.3;b.concierge={room:vis?null:String(ri(1,4))+'0'+ri(1,9),via:'Guest app',visitor:vis,hotel:pick(['Bali Horizon Resort','Ubud Garden Hotel'])};b.special=({HOTEL:'Extend stay (from the guest app)',TRIP:'Booked from the guest app. Pick up at the lobby.',TRANSPORT:'Booked from the guest app',CLUB:'Booked from the guest app'})[p]}
+  let svc=0,sub=0;
+  if(p==='HOTEL'){const r=pick(CAT.HOTEL.rooms),pl=pick(CAT.HOTEL.plans),n=ri(1,4),rooms=rnd()<.15?2:1,ad=ri(1,r.max),ch=rnd()<.25?1:0;
+    b.item={hotel:CAT.HOTEL.hotel.ubud,room:r.name,roomId:r.id,plan:pl.name,checkIn:dayN(off),checkOut:dayN(off+n),nights:n,rooms,adults:ad,children:ch,roomNo:null,inAt:null,outAt:null};
+    b.start=at(off,'14:00');b.end=at(off+n,'12:00');b.title=b.item.hotel+' · '+r.name;b.detail=b.item.checkIn+' → '+b.item.checkOut+' · '+n+' night'+(n>1?'s':'')+' · '+rooms+' room'+(rooms>1?'s':'');b.pax=ad+ch;
+    b.lines.push({type:'BASE',desc:r.name+' × '+n+' night'+(n>1?'s':'')+(rooms>1?' × '+rooms+' rooms':''),amount:r.price*n*rooms});if(pl.add)b.lines.push({type:'EXTRA',desc:pl.name+' meal plan',amount:pl.add*n*rooms});svc=10;
+    b.guests=[{name:gn,type:'ADULT',lead:true}].concat(ad>1?[{name:pick(NAMES)[0],type:'ADULT',lead:false}]:[]);}
+  if(p==='TRIP'){const t=pick(CAT.TRIP.trips),ad=ri(1,5),ch=rnd()<.3?ri(1,2):0;
+    b.item={trip:t.name,tripId:t.id,date:dayN(off),time:t.time,adults:ad,children:ch,pickup:pick(['Ubud Palace','Hotel lobby, Sayan','Villa Padi, Penestanan','Meeting point']),shown:null,inAt:null};
+    b.start=at(off,t.time);b.end=at(off,'17:00');b.title=t.name;b.detail=b.item.date+' '+t.time+' · '+ad+' adult'+(ad>1?'s':'')+(ch?' + '+ch+' child':'');b.pax=ad+ch;
+    b.lines.push({type:'BASE',desc:'Adults × '+ad,amount:t.adult*ad});if(ch)b.lines.push({type:'BASE',desc:'Children × '+ch,amount:t.child*ch});if(rnd()<.25)b.lines.push({type:'ADDON',desc:'Photo package',amount:150000});svc=0;}
+  if(p==='TRANSPORT'){const s=pick(CAT.TRANSPORT.services),pax=ri(1,s.max),hm=pick(['06:30','09:15','11:40','14:20','18:05','21:30']);
+    b.item={service:s.name,veh:s.veh,pickupAt:at(off,hm),pickup:pick(['Ngurah Rai Airport (DPS)','Ubud Palace','Seminyak Square','Canggu Beach']),dropoff:pick(['Ubud Rice Terrace Villa','Hotel Ayung','Villa Kubu, Seminyak','Sanur Harbour']),flight:rnd()<.5?pick(['GA 401','QZ 7510','SQ 938','EK 398']):'',pax,luggage:ri(0,pax+1),driver:null,vehicle:null,assign:'UNASSIGNED',ret:null};
+    b.start=b.item.pickupAt;b.end=b.start+2*36e5;b.title=b.item.pickup+' → '+b.item.dropoff;b.detail=s.veh+' · '+pax+' pax';b.pax=pax;b.lines.push({type:'BASE',desc:s.name+' ('+s.veh+')',amount:s.price});
+    if(rnd()<.2){b.lines.push({type:'BASE',desc:'Return transfer',amount:s.price});b.detail+=' · return trip'}svc=0;}
+  if(p==='CLUB'){const ev=pick(CAT.CLUB.events),tb=rnd()<.35,pr=tb?pick(CAT.CLUB.tables):pick(CAT.CLUB.tickets),qty=tb?1:ri(1,5),g=tb?ri(2,pr.cap):qty;
+    b.item={club:CAT.CLUB.clubs[0],event:ev.name,product:pr.name,isTable:tb,visit:dayN(off),guests:g,qty,label:null,inCount:0,arrival:pick(['21:00','22:00','22:30','23:00'])};
+    b.start=at(off,'21:00');b.end=at(off+1,'03:00');b.title=b.item.club+' · '+ev.name;b.detail=b.item.visit+' · '+pr.name+' × '+qty;b.pax=g;b.lines.push({type:'BASE',desc:pr.name+' × '+qty,amount:pr.price*qty});svc=tb?0:0;}
+  if(rnd()<.12&&APP.id!=='x'){const dsc=Math.round(b.lines[0].amount*.1/1000)*1000;b.lines.push({type:'DISCOUNT',desc:'Discount: repeat guest',amount:dsc})}
+  money(b);const tt=totals(b.subtotal,b.discount,svc);b.service=tt.service;b.tax=tt.tax;b.total=tt.total;b.svcPct=svc;b.taxPct=11;
+  b.pct=sup.pct;b.commission=Math.round(b.total*sup.pct/100);b.no=bookingNo(p,sup.id,b.created);
+  b.cancelPolicy={name:'Flexible (72 h)',rules:[[72,100],[24,50],[0,0]]};
+  const ev=(t,type,msg,by)=>b.events.push({t,type,msg,by:by||'staff@'+(sup.id==='s1'?'ubud':'semi')+'.example'});
+  ev(b.created,'CREATED',b.concierge?(b.concierge.visitor?'Requested by a visitor in the guest app (not staying). The concierge arranges payment':'Requested by the guest from room '+b.concierge.room+' in the guest app'):'Booking '+b.no+' created ('+b.source+')',b.concierge?'guest app':undefined);
+  ev(b.created+2000,'NOTIFICATION','Email sent to the guest ('+b.email+')','system');ev(b.created+2500,'NOTIFICATION','Email sent to the supplier ('+sup.name+')','system');
+  const pay=(amt,m,t,kind,of)=>{const x={id:'p'+(APP.n++),kind:kind||'PAYMENT',method:m,amount:amt,tx:'SUCCEEDED',at:t,ref:kind==='REFUND'?'RF-'+b.no:'TX'+ri(100000,999999),of:of||null};b.payments.push(x);ev(t,kind==='REFUND'?'REFUND':'PAYMENT',(kind==='REFUND'?'Refund issued: ':'Payment received: ')+fmt(amt)+' ('+m+')');return x};
+  const M=b.concierge&&!b.concierge.visitor?['ROOM_CHARGE']:['CASH','BANK_TRANSFER','CARD','QRIS','E_WALLET'];
+  if(st==='PENDING'){b.hold=NOW+(b.concierge?ri(120,480):ri(4,55))*6e4;}
+  else if(st==='EXPIRED'){ev(b.created+36e5,'STATUS_CHANGED','Hold expired without payment','system');}
+  else{ev(b.created+ri(2,40)*6e4,'STATUS_CHANGED','Confirmed');
+    const r=rnd();if(st==='CANCELLED'){if(r<.7){const x=pay(b.total,pick(M),b.created+9e5);if(r<.45){pay(r<.25?b.total:Math.round(b.total/2),x.method,b.created+DAY,'REFUND',x.id)}}
+      b.cancelReason=pick(['Guest changed plans','Flight cancelled','Double booking','Illness']);b.cancelledAt=b.created+DAY;ev(b.cancelledAt,'STATUS_CHANGED','Cancelled: '+b.cancelReason);}
+    else if(r<.55){const x=pay(b.total,pick(M),b.created+9e5)}else if(r<.8){pay(Math.round(b.total*.3/1000)*1000,pick(M),b.created+9e5)}}
+  if(st==='COMPLETED'){ev(b.end,'STATUS_CHANGED','Completed');}
+  if(st==='NO_SHOW')ev(b.start+36e5,'STATUS_CHANGED','Guest did not show up');
+  if(st==='CANCELLED'||st==='EXPIRED'||st==='PENDING'){}
+  b.status=st;payStatus(b);
+  if(p==='HOTEL'&&(st==='COMPLETED')){b.item.roomNo=String(ri(1,3))+'0'+ri(1,8);b.item.inAt=b.start;b.item.outAt=b.end}
+  if(p==='HOTEL'&&st==='CONFIRMED'&&off<0&&rnd()<.8){b.item.roomNo=String(ri(1,3))+'0'+ri(1,8);b.item.inAt=b.start;ev(b.start,'CHECK_IN','Checked in to room '+b.item.roomNo)}
+  if(p==='TRANSPORT'&&(st==='COMPLETED')){b.item.assign='DROPPED_OFF';b.item.driver='d'+ri(1,4);b.item.vehicle='c'+ri(1,4)}
+  else if(p==='TRANSPORT'&&st==='CONFIRMED'&&rnd()<.55){const d=pick(CAT.TRANSPORT.drivers);b.item.driver=d.id;b.item.vehicle=CAT.TRANSPORT.vehicles.find(v=>v.d===d.id).id;b.item.assign='ASSIGNED';ev(b.created+DAY/2,'ASSIGNMENT','Assigned to '+d.name)}
+  if(p==='TRIP'&&st==='COMPLETED'){b.item.shown=b.pax;b.item.inAt=b.start}
+  if(p==='CLUB'&&st==='COMPLETED'){b.item.inCount=b.item.guests;b.item.inAt=b.start}
+  if(p==='CLUB'&&st==='CONFIRMED'&&off===0&&rnd()<.5){b.item.inCount=Math.min(b.item.guests,ri(1,b.item.guests));b.item.inAt=NOW-36e5}
+  return b;
+}
+function customersFrom(bs){const m={};bs.forEach(b=>{const k=b.supplier.id+b.email;(m[k]=m[k]||{id:'c'+Object.keys(m).length,name:b.guest,email:b.email,phone:b.phone,country:b.country,supplier:b.supplier,notes:''});b.cid=m[k].id});return Object.values(m)}
+function seedAll(){
+  APP.n=1;const out=[];
+  const prods=APP.product==='ALL'?['HOTEL','TRIP','TRANSPORT','CLUB']:[APP.product];
+  const sups=APP.product==='ALL'?SUPPLIERS:[SUPPLIERS[0]];
+  for(const sup of sups)for(const p of prods){const n=APP.product==='ALL'?14:44;for(let i=0;i<n;i++)out.push(mk(p,sup,i))}
+  out.sort((a,b)=>a.created-b.created);return out;
+}
+
+/* ---------- state ---------- */
+const S={role:null,page:'dashboard',B:seedAll(),f:{q:'',st:new Set(),pay:'',src:'',sup:'',prod:'',from:'',to:''},sort:{k:'start',d:-1},pg:1,detail:null,calMonth:new Date(T0).setDate(1),
+  fdDate:0,dispDay:0,cust:null,payKind:'',payQ:'',repDays:30};
+S.C=customersFrom(S.B);
+const $=s=>document.querySelector(s), root=$('#root');
+const isStaff=()=>S.role==='STAFF', isOp=()=>S.role==='OPERATOR';
+const find=id=>S.B.find(b=>b.id===id);
+const ST={PENDING:['warn','Pending'],CONFIRMED:['info','Confirmed'],COMPLETED:['ok','Completed'],CANCELLED:['bad','Cancelled'],NO_SHOW:['bad','No-show'],EXPIRED:['off','Expired']};
+const PY={UNPAID:['bad','Unpaid'],PARTIAL:['warn','Partial'],PAID:['ok','Paid'],PARTIALLY_REFUNDED:['info','Part refunded'],REFUNDED:['off','Refunded']};
+const pill=(m,k)=>'<span class="pill '+m[k][0]+'">'+m[k][1]+'</span>';
+const prodTag=p=>'<span class="tag">'+PRODUCTS[p].pre+'</span>';
+const vis=()=>S.B.filter(b=>!b.deleted||S.f.del);
+const bal=b=>Math.max(0,b.total-b.paid);
+function toast(m,bad){const t=document.createElement('div');t.className='toast'+(bad?' bad':'');t.textContent=m;$('#toasts').append(t);setTimeout(()=>t.remove(),3800)}
+function ev(b,type,msg){b.events.push({t:Date.now(),type,msg,by:isOp()?'operator@platform.example':(isStaff()?'staff@ubud.example':'admin@ubud.example')})}
+/* ---------- rules (mirror the API) ---------- */
+function refundPct(b){const h=(b.start-Date.now())/36e5;for(const[hh,p]of b.cancelPolicy.rules)if(h>=hh)return p;return 0}
+function canCancel(b){if(!['PENDING','CONFIRMED'].includes(b.status))return'This booking is already '+b.status.toLowerCase();if(isStaff()){if(b.status==='CONFIRMED')return'Only an admin can cancel a confirmed booking';if(b.paid>0)return'This booking has payments. Ask an admin to cancel it and handle the refund.'}return''}
+function setStatus(b,to,msg){const from=b.status;b.status=to;b.events.push({t:Date.now(),type:'STATUS_CHANGED',msg:msg||(from+' → '+to),by:who()})}
+const who=()=>isOp()?'operator@platform.example':(isStaff()?'staff@ubud.example':'admin@ubud.example');
+function addPay(b,amt,method,ref,status){const x={id:'p'+(APP.n++),kind:'PAYMENT',method,amount:amt,tx:status||'SUCCEEDED',at:Date.now(),ref:ref||'',of:null};b.payments.push(x);b.events.push({t:Date.now(),type:'PAYMENT',msg:'Payment '+(x.tx==='SUCCEEDED'?'received':'pending')+': '+fmt(amt)+' ('+method+')',by:who()});payStatus(b)}
+function refundLeft(b,p){return p.amount-b.payments.filter(r=>r.kind==='REFUND'&&r.tx==='SUCCEEDED'&&r.of===p.id).reduce((a,r)=>a+r.amount,0)}
+function addRefund(b,p,amt){b.payments.push({id:'p'+(APP.n++),kind:'REFUND',method:p.method,amount:amt,tx:'SUCCEEDED',at:Date.now(),ref:'RF-'+b.no,of:p.id});b.events.push({t:Date.now(),type:'REFUND',msg:'Refund issued: '+fmt(amt),by:who()});payStatus(b)}
+function stockLeft(kind,key,date,raw){ /* live count from open bookings, like the API */
+  const live=S.B.filter(b=>!b.deleted&&['PENDING','CONFIRMED','COMPLETED','NO_SHOW'].includes(b.status));
+  if(kind==='room'){const r=CAT.HOTEL.rooms.find(x=>x.id===key),iv=(S.INV[key]||{})[date];if(iv&&iv.stop&&!raw)return 0;return (iv?iv.total:r.units)-live.filter(b=>b.product==='HOTEL'&&b.item.roomId===key&&b.item.checkIn<=date&&b.item.checkOut>date).reduce((a,b)=>a+b.item.rooms,0)}
+  if(kind==='trip'){const t=CAT.TRIP.trips.find(x=>x.id===key),sc=MD.schedules.find(x=>x.trip===key&&x.date===date&&!x.deleted&&x.status!=='INACTIVE');if(MD.schedules.some(x=>x.trip===key&&x.date===date)&&!sc)return 0;return (sc?sc.quota:t.quota)-live.filter(b=>b.product==='TRIP'&&b.item.tripId===key&&b.item.date===date).reduce((a,b)=>a+b.pax,0)}
+  if(kind==='club'){const it=[...CAT.CLUB.tickets,...CAT.CLUB.tables].find(x=>x.id===key);return it.quota-live.filter(b=>b.product==='CLUB'&&b.item.visit===date&&b.item.product===it.name).reduce((a,b)=>a+b.item.qty,0)}
+}
+/* ---------- shell ---------- */
+
+const titleOf=p=>{if(p==='review')return 'Listing quality';if(p.startsWith('md-'))return MDLABEL(p.slice(3));const T={'set-profile':'My profile','set-business':APP.product==='HOTEL'?'Hotel profile':'Business profile','set-booking':'Booking settings','set-payments':'Payment settings','set-users':'Users','set-audit':'Audit log','set-suppliers':'Supplier accounts','set-platform':'Platform settings'};return T[p]||TITLES[p]||p};
+const TITLES={dashboard:'Dashboard',bookings:'Bookings',calendar:'Calendar',customers:'Customers',payments:'Payments',reports:'Reports',frontdesk:'Front desk',avail:'Availability',departures:'Departures',dispatch:'Dispatch board',door:'Door list',suppliers:'Suppliers',commission:'Commission',inventory:'Room inventory'};
+const MAIN={
+ HOTEL:[['dashboard','Dashboard'],['frontdesk','Front desk'],['avail','Availability'],['bookings','Bookings'],['calendar','Calendar'],['customers','Customers'],['payments','Payments'],['reports','Reports']],
+ TRIP:[['dashboard','Dashboard'],['departures','Departures'],['bookings','Bookings'],['calendar','Calendar'],['customers','Customers'],['payments','Payments'],['reports','Reports']],
+ TRANSPORT:[['dashboard','Dashboard'],['dispatch','Dispatch board'],['bookings','Bookings'],['calendar','Calendar'],['customers','Customers'],['payments','Payments'],['reports','Reports']],
+ CLUB:[['dashboard','Dashboard'],['door','Door list'],['bookings','Bookings'],['calendar','Calendar'],['customers','Customers'],['payments','Payments'],['reports','Reports']],
+ ALL:[['dashboard','Overview'],['bookings','All bookings'],['calendar','Calendar'],['suppliers','Suppliers'],['commission','Commission'],['customers','Customers'],['payments','Payments'],['reports','Reports']]};
+function navGroups(){
+  const g=[['Menu',MAIN[APP.product].filter(x=>!(isStaff()&&x[0]==='reports'))]];
+  MDGROUPS[APP.product].forEach(([t,ks])=>g.push([t+' master data',ks.map(k=>[k==='inventory'?'inventory':'md-'+k,MDLABEL(k)])]));
+  g.push(['Shared data',SHARED.map(k=>['md-'+k,MDLABEL(k)])]);
+  const s=[['set-profile','My profile']];
+  if(isOp())g.splice(1,0,['Catalog',[['review','Listing quality']]]);
+  if(isOp())s.push(['set-suppliers','Supplier accounts'],['set-users','Users'],['set-platform','Platform settings'],['set-audit','Audit log']);
+  else if(!isStaff())s.push(['set-business',titleOf('set-business')],['set-booking','Booking settings'],['set-payments','Payment settings'],['set-users','Users'],['set-audit','Audit log']);
+  g.push(['Settings',s]);return g;
+}
+function shell(){
+  const nav=navGroups().map(([t,items])=>'<div class="gl">'+t+'</div>'+items.map(([k,l])=>{const n=k==='bookings'?vis().filter(b=>['PENDING'].includes(b.status)).length:'';return '<button class="nav" data-go="'+k+'"'+(S.page===k?' aria-current="page"':'')+'>'+l+(n?'<span class="n">'+n+' pending</span>':'')+'</button>'}).join('')).join('');
+  const who=S.user;
+  return '<div class="app"><aside class="side"><div class="brand"><i>'+APP.mark+'</i><span>'+APP.name+'<small>'+APP.sub+'</small></span></div>'+nav+'<div class="gl">'+(isOp()?'Platform':APP.product==='HOTEL'?'Hotel':'Business')+'</div><div style="padding:0 10px;font-size:12.5px;color:var(--side-mut)">'+(isOp()?'All suppliers ('+S.sup.length+')':esc(S.biz.name))+'</div></aside><div class="scrim" data-act="closenav"></div>'+
+  '<div class="mainwrap"><header class="top"><button class="btn menu" data-act="opennav" aria-label="Menu">☰</button><strong>'+titleOf(S.page)+'</strong><span class="grow"></span><span class="chip demo">Demo data</span><span class="chip" title="'+esc(who.email)+'">'+esc(who.name)+' · '+roleName(who.role)+'</span><button class="btn" data-act="logout">Sign out</button><button class="btn pri" data-act="new">+ New booking</button></header><main class="main" id="main"></main></div></div>';
+}
+function render(){
+  if(!S.user){root.innerHTML=loginView();return}
+  if(!$('.app')){root.innerHTML=shell()}else{root.querySelector('.side').outerHTML=shell().match(/<aside[\s\S]*<\/aside>/)[0];root.querySelector('.top strong').textContent=titleOf(S.page)}
+  const m=$('#main');if(!PAGES[S.page])S.page='dashboard';m.innerHTML=PAGES[S.page]();document.body.classList.remove('nav-open');
+  if(S.detail&&!$('#ov-detail'))openDetail(S.detail);else if(S.detail)refreshDetail();
+}
+/* ---------- filters ---------- */
+function filtered(){const f=S.f,q=f.q.toLowerCase();let r=vis().filter(b=>(!q||(b.no+' '+b.guest+' '+b.email+' '+b.phone).toLowerCase().includes(q))&&(!f.st.size||f.st.has(b.status))&&(!f.pay||b.pay===f.pay)&&(!f.src||b.source===f.src)&&(!f.sup||b.supplier.id===f.sup)&&(!f.prod||b.product===f.prod)&&(!f.from||iso(b.start)>=f.from)&&(!f.to||iso(b.start)<=f.to));
+  const k=S.sort.k,d=S.sort.d;r.sort((a,b)=>{const x=k==='guest'||k==='no'?String(a[k]).localeCompare(b[k]):(a[k]-b[k]);return x*d||a.no.localeCompare(b.no)});return r}
+const sortTh=(k,l,cls)=>'<th class="'+(cls||'')+'"><button data-sort="'+k+'">'+l+(S.sort.k===k?(S.sort.d>0?' ▲':' ▼'):'')+'</button></th>';
+/* ---------- pages ---------- */
+const PAGES={};
+PAGES.dashboard=()=>{
+  const bs=vis(),today=dayN(0),live=b=>['PENDING','CONFIRMED'].includes(b.status);
+  const rev14=Array.from({length:14},(_,i)=>{const t=T0-(13-i)*DAY;return{l:new Date(t).getDate(),v:bs.filter(b=>['CONFIRMED','COMPLETED'].includes(b.status)&&b.created>=t&&b.created<t+DAY).reduce((a,b)=>a+b.total,0)}});
+  const mx=Math.max(1,...rev14.map(x=>x.v));
+  const pend=bs.filter(b=>b.status==='PENDING').sort((a,b)=>a.hold-b.hold);
+  const unpaid=bs.filter(b=>['CONFIRMED','COMPLETED'].includes(b.status)&&['UNPAID','PARTIAL'].includes(b.pay));
+  const created=bs.filter(b=>b.created>=T0).length;
+  let tiles=[['New today',created,'bookings created'],['Pending holds',pend.length,pend[0]?'next expires in '+Math.max(0,Math.round((pend[0].hold-Date.now())/6e4))+' min':'none waiting'],['To collect',fmt(unpaid.reduce((a,b)=>a+bal(b),0)),unpaid.length+' unpaid or partial']];
+  if(APP.product==='HOTEL'||APP.product==='ALL')tiles.push(['Arrivals today',bs.filter(b=>b.product==='HOTEL'&&b.item.checkIn===today&&live(b)).length,'hotel']);
+  if(APP.product==='HOTEL')tiles.push(['Departures today',bs.filter(b=>b.product==='HOTEL'&&b.item.checkOut===today&&['CONFIRMED','COMPLETED'].includes(b.status)).length,'check-out'],['In-house',bs.filter(b=>b.product==='HOTEL'&&b.status==='CONFIRMED'&&b.item.inAt&&!b.item.outAt).length,'rooms occupied']);
+  if(APP.product==='TRIP'||APP.product==='ALL')tiles.push(['Guests on trips today',bs.filter(b=>b.product==='TRIP'&&b.item.date===today&&b.status==='CONFIRMED').reduce((a,b)=>a+b.pax,0),'confirmed']);
+  if(APP.product==='TRANSPORT'||APP.product==='ALL')tiles.push(['Pick-ups today',bs.filter(b=>b.product==='TRANSPORT'&&iso(b.start)===today&&b.status==='CONFIRMED').length,'transport'],['Unassigned (2 days)',bs.filter(b=>b.product==='TRANSPORT'&&b.status==='CONFIRMED'&&b.item.assign==='UNASSIGNED'&&b.start<T0+2*DAY&&b.start>=T0).length,'need a driver']);
+  if(APP.product==='CLUB'||APP.product==='ALL')tiles.push(['Guests tonight',bs.filter(b=>b.product==='CLUB'&&b.item.visit===today&&b.status==='CONFIRMED').reduce((a,b)=>a+b.item.guests,0),bs.filter(b=>b.product==='CLUB'&&b.item.visit===today&&b.status==='CONFIRMED').reduce((a,b)=>a+b.item.inCount,0)+' through the door']);
+  if(APP.product==='ALL'){const gm=bs.filter(b=>['CONFIRMED','COMPLETED'].includes(b.status));tiles.push(['Gross sales',fmt(gm.reduce((a,b)=>a+b.total,0)),gm.length+' confirmed or completed'],['Commission earned',fmt(gm.reduce((a,b)=>a+b.commission,0)),'platform share'])}
+  const byS=Object.keys(ST).map(k=>[ST[k][1],bs.filter(b=>b.status===k).length,k]);const mxS=Math.max(1,...byS.map(x=>x[1]));
+  const next=bs.filter(b=>['PENDING','CONFIRMED'].includes(b.status)&&b.start>=NOW-6e4*60*3).sort((a,b)=>a.start-b.start).slice(0,6);
+  return '<div class="ph"><div><h1>'+(isOp()?'Platform overview':APP.name+' overview')+'</h1><p>'+(isOp()?'All suppliers and all four products.':'Today at '+S.biz.name)+'</p></div></div>'+
+  '<div class="tiles">'+tiles.map(t=>'<div class="card tile"><div class="v">'+t[1]+'</div><div class="l"><b>'+t[0]+'</b><br>'+t[2]+'</div></div>').join('')+'</div>'+
+  '<div class="two"><div class="card pad"><h2>Sales by day created (last 14 days)</h2><div style="display:flex;align-items:flex-end;gap:5px;height:130px;margin-top:12px">'+rev14.map(x=>'<div title="'+fmt(x.v)+'" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;height:100%"><div style="width:100%;background:var(--accent);border-radius:3px 3px 0 0;height:'+Math.round(x.v/mx*100)+'%;min-height:2px"></div><span class="muted" style="font-size:10.5px">'+x.l+'</span></div>').join('')+'</div></div>'+
+  '<div class="card pad"><h2>Bookings by status</h2><div class="bars" style="margin-top:10px">'+byS.map(x=>'<button class="bar" data-statusgo="'+x[2]+'"><span>'+x[0]+'</span><span class="tr"><i style="width:'+Math.round(x[1]/mxS*100)+'%"></i></span><span class="c">'+x[1]+'</span></button>').join('')+'</div></div></div>'+
+  '<div class="two"><div class="card"><div class="pad"><h2>Coming up</h2></div><div class="tw"><table><tbody>'+next.map(b=>'<tr data-open="'+b.id+'"><td class="mono">'+b.no+'</td><td class="cl">'+esc(b.guest)+'</td><td>'+fdt(b.start)+'</td><td>'+pill(ST,b.status)+'</td></tr>').join('')+'</tbody></table></div></div>'+
+  '<div class="card"><div class="pad"><h2>Pending holds</h2><p class="muted" style="margin:3px 0 0;font-size:12.5px">Unpaid pending bookings expire when the hold runs out and the stock is released.</p></div><div class="tw"><table><tbody>'+(pend.length?pend.slice(0,6).map(b=>'<tr data-open="'+b.id+'"><td class="mono">'+b.no+'</td><td class="cl">'+esc(b.guest)+'</td><td>'+fmt(b.total)+'</td><td><span class="pill warn">'+Math.max(0,Math.round((b.hold-Date.now())/6e4))+' min left</span></td></tr>').join(''):'<tr class="sub"><td class="muted">No pending holds.</td></tr>')+'</tbody></table></div></div></div>';
+};
+PAGES.bookings=()=>{
+  const r=filtered(),per=10,pages=Math.max(1,Math.ceil(r.length/per));S.pg=Math.min(S.pg,pages);const rows=r.slice((S.pg-1)*per,S.pg*per);
+  const chips=Object.keys(ST).map(k=>'<label><input type="checkbox" data-st="'+k+'"'+(S.f.st.has(k)?' checked':'')+'>'+ST[k][1]+'</label>').join('');
+  const opt=(a,v,all)=>'<option value="">'+all+'</option>'+a.map(x=>'<option value="'+x[0]+'"'+(v===x[0]?' selected':'')+'>'+x[1]+'</option>').join('');
+  return '<div class="ph"><div><h1>'+(isOp()?'All bookings':'Bookings')+'</h1><p>'+r.length+' booking'+(r.length===1?'':'s')+' match.</p></div><div class="acts"><button class="btn" data-act="export">Export CSV</button><button class="btn pri" data-act="new">+ New booking</button></div></div>'+
+  '<div class="tools"><input type="search" id="q" placeholder="Search number, guest, email, phone" value="'+esc(S.f.q)+'" aria-label="Search"><select data-f="pay" aria-label="Payment">'+opt(Object.keys(PY).map(k=>[k,PY[k][1]]),S.f.pay,'Any payment')+'</select><select data-f="src" aria-label="Source">'+opt(SRC.map(s=>[s,SRCL(s)]),S.f.src,'Any source')+'</select>'+
+  (isOp()?'<select data-f="sup" aria-label="Supplier">'+opt(SUPPLIERS.map(s=>[s.id,s.name]),S.f.sup,'All suppliers')+'</select><select data-f="prod" aria-label="Product">'+opt(Object.keys(PRODUCTS).map(k=>[k,PRODUCTS[k].label]),S.f.prod,'All products')+'</select>':'')+
+  '<span class="ctl"><label for="from">From</label><input type="date" id="from" data-f="from" value="'+S.f.from+'"></span><span class="ctl"><label for="to">To</label><input type="date" id="to" data-f="to" value="'+S.f.to+'"></span><button class="btn ghost sm" data-act="clear">Clear</button></div>'+
+  '<div class="chips" style="margin-bottom:10px">'+chips+'</div>'+
+  '<div class="card"><div class="tw"><table><thead><tr>'+sortTh('no','Booking')+(isOp()?'<th>Supplier</th>':'')+sortTh('guest','Guest')+'<th>What</th>'+sortTh('start','Service date')+'<th>Status</th><th>Payment</th>'+sortTh('total','Total','num')+'</tr></thead><tbody>'+
+  (rows.length?rows.map(b=>'<tr data-open="'+b.id+'"'+(b.deleted?' class="del"':'')+'><td><span class="mono">'+b.no+'</span>'+(isOp()?'':'')+'</td>'+(isOp()?'<td class="cl">'+esc(b.supplier.name)+'</td>':'')+'<td class="cl">'+esc(b.guest)+'<div class="muted" style="font-size:12px">'+SRCL(b.source)+' · '+b.pax+' pax</div></td><td class="cl">'+esc(b.title)+'<div class="muted" style="font-size:12px">'+esc(b.detail)+'</div></td><td>'+fdt(b.start)+'</td><td>'+pill(ST,b.status)+(b.status==='PENDING'&&b.hold?'<div class="muted" style="font-size:11.5px">hold '+Math.max(0,Math.round((b.hold-Date.now())/6e4))+' min</div>':'')+'</td><td>'+pill(PY,b.pay)+'</td><td class="num">'+fmt(b.total)+'</td></tr>').join(''):'<tr class="sub"><td colspan="9" class="empty">No bookings match these filters.</td></tr>')+
+  '</tbody></table></div><div class="foot"><span>Page '+S.pg+' of '+pages+'</span><span class="acts"><button class="btn sm" data-pg="-1"'+(S.pg<=1?' disabled':'')+'>Previous</button><button class="btn sm" data-pg="1"'+(S.pg>=pages?' disabled':'')+'>Next</button></span></div></div>';
+};
+PAGES.calendar=()=>{
+  const first=new Date(S.calMonth),y=first.getFullYear(),m=first.getMonth(),dim=new Date(y,m+1,0).getDate(),pad=(first.getDay()+6)%7;
+  const cells=[];for(let i=0;i<pad;i++)cells.push('<div class="cd off"></div>');
+  for(let d=1;d<=dim;d++){const ds=iso(new Date(y,m,d)),bs=vis().filter(b=>iso(b.start)===ds&&['PENDING','CONFIRMED','COMPLETED','NO_SHOW'].includes(b.status));
+    cells.push('<div class="cd'+(ds===dayN(0)?' today':'')+'"><b>'+d+'</b>'+bs.slice(0,3).map(b=>'<button class="ce '+ST[b.status][0]+'" data-open="'+b.id+'" title="'+esc(b.guest+' · '+b.title)+'">'+(APP.product==='ALL'?PRODUCTS[b.product].pre+' ':'')+esc(b.guest.split(' ')[0])+'</button>').join('')+(bs.length>3?'<span class="muted" style="font-size:11px">+'+(bs.length-3)+' more</span>':'')+'</div>')}
+  return '<div class="ph"><div><h1>'+first.toLocaleDateString('en-GB',{month:'long',year:'numeric'})+'</h1><p>Bookings by service date. Click one to open it.</p></div><div class="acts"><button class="btn" data-cal="-1">← Prev</button><button class="btn" data-cal="0">Today</button><button class="btn" data-cal="1">Next →</button></div></div><div class="card pad"><div class="cal">'+['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(x=>'<div class="ch">'+x+'</div>').join('')+cells.join('')+'</div></div>';
+};
+PAGES.customers=()=>{
+  const q=(S.f.cq||'').toLowerCase(),rows=S.C.filter(c=>!q||(c.name+c.email).toLowerCase().includes(q));
+  return '<div class="ph"><div><h1>Customers</h1><p>The address book of guests who booked. Built from bookings.</p></div></div><div class="tools"><input type="search" id="cq" placeholder="Search name or email" value="'+esc(S.f.cq||'')+'"></div><div class="card"><div class="tw"><table><thead><tr><th>Name</th><th>Email</th><th>Country</th>'+(isOp()?'<th>Supplier</th>':'')+'<th class="num">Bookings</th><th class="num">Spend</th></tr></thead><tbody>'+rows.map(c=>{const bs=S.B.filter(b=>b.cid===c.id&&!b.deleted);return '<tr data-cust="'+c.id+'"><td>'+esc(c.name)+'</td><td class="cl">'+esc(c.email)+'</td><td>'+c.country+'</td>'+(isOp()?'<td>'+esc(c.supplier.name)+'</td>':'')+'<td class="num">'+bs.length+'</td><td class="num">'+fmt(bs.filter(b=>['CONFIRMED','COMPLETED'].includes(b.status)).reduce((a,b)=>a+b.total,0))+'</td></tr>'}).join('')+'</tbody></table></div></div>';
+};
+PAGES.payments=()=>{
+  const all=[];S.B.filter(b=>!b.deleted).forEach(b=>b.payments.forEach(p=>all.push({p,b})));
+  const rows=all.filter(x=>(!S.payKind||x.p.kind===S.payKind)).sort((a,b)=>b.p.at-a.p.at).slice(0,40);
+  const rec=all.filter(x=>x.p.kind==='PAYMENT'&&x.p.tx==='SUCCEEDED').reduce((a,x)=>a+x.p.amount,0),ref=all.filter(x=>x.p.kind==='REFUND'&&x.p.tx==='SUCCEEDED').reduce((a,x)=>a+x.p.amount,0);
+  return '<div class="ph"><div><h1>Payments</h1><p>Money in and refunds out, newest first.</p></div></div><div class="tiles"><div class="card tile"><div class="v">'+fmt(rec)+'</div><div class="l">Received</div></div><div class="card tile"><div class="v">'+fmt(ref)+'</div><div class="l">Refunded</div></div><div class="card tile"><div class="v">'+fmt(rec-ref)+'</div><div class="l">Net</div></div></div>'+
+  '<div class="tools"><select data-pk aria-label="Kind"><option value="">Payments and refunds</option><option value="PAYMENT"'+(S.payKind==='PAYMENT'?' selected':'')+'>Payments only</option><option value="REFUND"'+(S.payKind==='REFUND'?' selected':'')+'>Refunds only</option></select></div><div class="card"><div class="tw"><table><thead><tr><th>When</th><th>Booking</th><th>Guest</th><th>Method</th><th>Kind</th><th>Status</th><th class="num">Amount</th></tr></thead><tbody>'+rows.map(({p,b})=>'<tr data-open="'+b.id+'"><td>'+fdt(p.at)+'</td><td class="mono">'+b.no+'</td><td class="cl">'+esc(b.guest)+'</td><td>'+p.method.replace('_',' ').toLowerCase()+'</td><td>'+(p.kind==='REFUND'?'<span class="pill info">Refund</span>':'Payment')+'</td><td>'+(p.tx==='VOIDED'?'<span class="pill off">Voided</span>':p.tx==='PENDING'?'<span class="pill warn">Pending</span>':'<span class="pill ok">OK</span>')+'</td><td class="num">'+(p.kind==='REFUND'?'−':'')+fmt(p.amount)+'</td></tr>').join('')+'</tbody></table></div></div>';
+};
+PAGES.reports=()=>{
+  if(isStaff())return '<div class="ph"><div><h1>Reports</h1></div></div><div class="note w">Reports are for admins. Staff can work with bookings, payments and check-in, but cannot see revenue or commission.</div>';
+  const from=T0-S.repDays*DAY,bs=vis().filter(b=>b.created>=from),ok=bs.filter(b=>['CONFIRMED','COMPLETED'].includes(b.status));
+  const rev=ok.reduce((a,b)=>a+b.total,0),col=ok.reduce((a,b)=>a+b.paid,0),com=ok.reduce((a,b)=>a+b.commission,0),canc=bs.filter(b=>b.status==='CANCELLED').length,ns=bs.filter(b=>b.status==='NO_SHOW').length;
+  const dec=ok.length+canc+ns,rate=dec?Math.round(canc/dec*1000)/10:0;
+  const grp=(keyf,lab)=>{const m={};ok.forEach(b=>{const k=keyf(b);m[k]=(m[k]||0)+b.total});const e=Object.entries(m).sort((a,b)=>b[1]-a[1]);const mx=Math.max(1,...e.map(x=>x[1]));return e.map(([k,v])=>'<div class="bar" style="cursor:default"><span>'+esc(lab(k))+'</span><span class="tr"><i style="width:'+Math.round(v/mx*100)+'%"></i></span><span class="c" style="width:auto;white-space:nowrap">'+fmt(v)+'</span></div>').join('')||'<p class="muted">Nothing in this period.</p>'};
+  const meth={};S.B.forEach(b=>b.payments.forEach(p=>{if(p.tx==='SUCCEEDED'&&p.at>=from)meth[p.method]=(meth[p.method]||0)+(p.kind==='REFUND'?-p.amount:p.amount)}));
+  return '<div class="ph"><div><h1>Reports</h1><p>Sales are CONFIRMED and COMPLETED bookings created in the period.</p></div><div class="acts"><select data-rep aria-label="Period">'+[7,30,90].map(n=>'<option value="'+n+'"'+(S.repDays===n?' selected':'')+'>Last '+n+' days</option>').join('')+'</select></div></div>'+
+  '<div class="tiles"><div class="card tile"><div class="v">'+fmt(rev)+'</div><div class="l">Sales ('+ok.length+' bookings)</div></div><div class="card tile"><div class="v">'+fmt(col)+'</div><div class="l">Collected · '+fmt(rev-col)+' outstanding</div></div>'+(isOp()?'<div class="card tile"><div class="v">'+fmt(com)+'</div><div class="l">Commission</div></div>':'')+'<div class="card tile"><div class="v">'+rate+'%</div><div class="l">Cancellation rate</div></div><div class="card tile"><div class="v">'+(ok.length?fmt(rev/ok.length):'—')+'</div><div class="l">Average booking value</div></div></div>'+
+  '<div class="two"><div class="card pad"><h2>Sales by '+(APP.product==='ALL'?'product':'source')+'</h2><div class="bars" style="margin-top:10px">'+grp(b=>APP.product==='ALL'?b.product:b.source,k=>APP.product==='ALL'?PRODUCTS[k].label:SRCL(k))+'</div></div><div class="card pad"><h2>Money by payment method (net)</h2><div class="bars" style="margin-top:10px">'+Object.entries(meth).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<div class="bar" style="cursor:default"><span>'+k.replace('_',' ').toLowerCase()+'</span><span class="tr"><i style="width:'+Math.round(v/Math.max(1,...Object.values(meth))*100)+'%"></i></span><span class="c" style="width:auto;white-space:nowrap">'+fmt(v)+'</span></div>').join('')+'</div></div></div>';
+};
+PAGES.suppliers=()=>'<div class="ph"><div><h1>Suppliers</h1><p>Every supplier on the platform with its sales and commission.</p></div></div><div class="card"><div class="tw"><table><thead><tr><th>Supplier</th><th class="num">Commission %</th><th class="num">Bookings</th><th class="num">Pending</th><th class="num">Sales</th><th class="num">Commission</th></tr></thead><tbody>'+SUPPLIERS.map(s=>{const bs=S.B.filter(b=>b.supplier.id===s.id&&!b.deleted),ok=bs.filter(b=>['CONFIRMED','COMPLETED'].includes(b.status));return '<tr data-supf="'+s.id+'"><td>'+esc(s.name)+'</td><td class="num">'+s.pct+'</td><td class="num">'+bs.length+'</td><td class="num">'+bs.filter(b=>b.status==='PENDING').length+'</td><td class="num">'+fmt(ok.reduce((a,b)=>a+b.total,0))+'</td><td class="num">'+fmt(ok.reduce((a,b)=>a+b.commission,0))+'</td></tr>'}).join('')+'</tbody></table></div></div><p class="muted" style="margin-top:10px">Click a supplier to see its bookings. The commission rate is copied onto each booking when it is created, so changing it later does not rewrite history.</p>';
+PAGES.commission=()=>{
+  const ok=S.B.filter(b=>!b.deleted&&['CONFIRMED','COMPLETED'].includes(b.status));let tot=0,totc=0;
+  const rows=SUPPLIERS.map(s=>{const bs=ok.filter(b=>b.supplier.id===s.id);const g=bs.reduce((a,b)=>a+b.total,0),c=bs.reduce((a,b)=>a+b.commission,0);tot+=g;totc+=c;return{s,bs,g,c,by:Object.keys(PRODUCTS).map(p=>[p,bs.filter(b=>b.product===p).reduce((a,b)=>a+b.total,0),bs.filter(b=>b.product===p).reduce((a,b)=>a+b.commission,0)])}});
+  return '<div class="ph"><div><h1>Commission</h1><p>What each supplier owes the platform. Only confirmed and completed bookings count.</p></div></div><div class="tiles"><div class="card tile"><div class="v">'+fmt(tot)+'</div><div class="l">Gross sales</div></div><div class="card tile"><div class="v">'+fmt(totc)+'</div><div class="l">Commission due</div></div><div class="card tile"><div class="v">'+fmt(tot-totc)+'</div><div class="l">Net to suppliers</div></div></div>'+
+  '<div class="card"><div class="tw"><table><thead><tr><th>Supplier</th><th class="num">Rate</th><th class="num">Bookings</th><th class="num">Gross</th><th class="num">Commission</th><th class="num">Net to supplier</th><th>Hotel · Trip · Transport · Club (commission)</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.s.name)+'</td><td class="num">'+r.s.pct+'%</td><td class="num">'+r.bs.length+'</td><td class="num">'+fmt(r.g)+'</td><td class="num">'+fmt(r.c)+'</td><td class="num">'+fmt(r.g-r.c)+'</td><td class="muted" style="font-size:12.5px">'+r.by.map(x=>fmt(x[2])).join(' · ')+'</td></tr>').join('')+'</tbody></table></div></div>';
+};
+/* product pages */
+PAGES.frontdesk=()=>{
+  const ds=dayN(S.fdDate),h=vis().filter(b=>b.product==='HOTEL');
+  const arr=h.filter(b=>b.item.checkIn===ds&&['PENDING','CONFIRMED','COMPLETED'].includes(b.status)),dep=h.filter(b=>b.item.checkOut===ds&&['CONFIRMED','COMPLETED'].includes(b.status)),inh=h.filter(b=>b.status==='CONFIRMED'&&b.item.checkIn<ds&&b.item.checkOut>ds);
+  const row=(b,k)=>'<tr data-open="'+b.id+'"><td class="mono">'+b.no+'</td><td class="cl">'+esc(b.guest)+'</td><td>'+esc(b.item.room)+(b.item.rooms>1?' ×'+b.item.rooms:'')+'</td><td>'+(b.item.roomNo?'<span class="tag">'+b.item.roomNo+'</span>':'—')+'</td><td>'+pill(PY,b.pay)+(bal(b)>0&&b.status!=='PENDING'?'<div class="muted" style="font-size:11.5px">owes '+fmt(bal(b))+'</div>':'')+'</td><td class="act">'+(k==='arr'&&b.status==='CONFIRMED'&&!b.item.inAt?'<button class="btn sm pri" data-ci="'+b.id+'">Check in</button>':k==='dep'&&b.item.inAt&&!b.item.outAt?'<button class="btn sm pri" data-co="'+b.id+'">Check out</button>':b.item.outAt?'<span class="pill ok">Checked out</span>':b.item.inAt?'<span class="pill info">In house</span>':b.status==='PENDING'?'<span class="pill warn">Pending</span>':'')+'</td></tr>';
+  const tbl=(t,a,k)=>'<div class="card" style="margin-bottom:14px"><div class="pad"><h2>'+t+' ('+a.length+')</h2></div><div class="tw"><table><thead><tr><th>Booking</th><th>Guest</th><th>Room type</th><th>Room</th><th>Payment</th><th></th></tr></thead><tbody>'+(a.length?a.map(b=>row(b,k)).join(''):'<tr class="sub"><td colspan="6" class="muted">Nobody.</td></tr>')+'</tbody></table></div></div>';
+  const occ=live('rooms','s1').map(r=>{const t=r.units,l=stockLeft('room',r.id,ds);return[r.name,t-l,t]});
+  return '<div class="ph"><div><h1>Front desk</h1><p>'+fdate(T0+S.fdDate*DAY)+'</p></div><div class="acts"><button class="btn" data-fd="-1">← Yesterday</button><button class="btn" data-fd="0">Today</button><button class="btn" data-fd="1">Tomorrow →</button></div></div><div class="card pad" style="margin-bottom:14px"><h2>Occupancy</h2><div class="bars" style="margin-top:10px">'+occ.map(o=>'<div class="bar" style="cursor:default"><span>'+o[0]+'</span><span class="tr"><i style="width:'+Math.round(o[1]/o[2]*100)+'%"></i></span><span class="c" style="width:auto;white-space:nowrap">'+o[1]+' / '+o[2]+'</span></div>').join('')+'</div></div>'+tbl('Arrivals',arr,'arr')+tbl('Departures',dep,'dep')+tbl('In house',inh,'in');
+};
+PAGES.avail=()=>{
+  const days=Array.from({length:14},(_,i)=>dayN(i));
+  return '<div class="ph"><div><h1>Availability</h1><p>Rooms left each night, counted from live bookings. Red means sold out.</p></div></div><div class="card"><div class="tw"><table><thead><tr><th>Room type</th>'+days.map(d=>'<th class="num">'+d.slice(8)+'<br><span style="font-weight:400">'+new Date(d).toLocaleDateString('en-GB',{weekday:'short'})+'</span></th>').join('')+'</tr></thead><tbody>'+live('rooms','s1').map(r=>'<tr style="cursor:default"><td>'+r.name+'<div class="muted" style="font-size:12px">'+fmt(r.price)+' / night · '+r.units+' units</div></td>'+days.map(d=>{const l=stockLeft('room',r.id,d);return '<td class="num" style="'+(l<=0?'background:var(--bad-soft);color:var(--bad)':l<=2?'background:var(--warn-soft);color:var(--warn)':'')+'">'+l+'</td>'}).join('')+'</tr>').join('')+'</tbody></table></div></div>';
+};
+PAGES.departures=()=>{
+  const out=[];for(let i=0;i<8;i++)for(const t of live('trips','s1')){const ds=dayN(i),left=stockLeft('trip',t.id,ds),bs=vis().filter(b=>b.product==='TRIP'&&b.item.tripId===t.id&&b.item.date===ds&&['CONFIRMED','PENDING','COMPLETED'].includes(b.status));out.push({t,ds,left,bs})}
+  const rows=out.filter(x=>x.bs.length||x.t.id==='t1').slice(0,14);
+  return '<div class="ph"><div><h1>Departures</h1><p>Next 8 days. Click a departure to see its manifest and mark who showed up.</p></div></div>'+rows.map(x=>{const g=x.bs.reduce((a,b)=>a+b.pax,0);return '<div class="card" style="margin-bottom:12px"><button class="rel" style="width:100%;border:0;background:none;cursor:pointer;padding:12px 16px;text-align:left" data-dep="'+x.t.id+'|'+x.ds+'"><span><b>'+esc(x.t.name)+'</b><br><span class="muted">'+fdate(new Date(x.ds).getTime())+' · '+x.t.time+'</span></span><span style="text-align:right;min-width:160px"><b>'+g+' / '+x.t.quota+'</b> guests<br><span class="tr" style="display:block;height:8px;background:var(--surface2);border:1px solid var(--line);border-radius:5px;overflow:hidden;margin-top:4px"><i style="display:block;height:100%;width:'+Math.min(100,Math.round(g/x.t.quota*100))+'%;background:'+(x.left<=0?'var(--bad)':'var(--accent)')+'"></i></span></span></button>'+(S.depOpen===x.t.id+'|'+x.ds?'<div class="tw"><table><thead><tr><th>Booking</th><th>Guest</th><th class="num">Guests</th><th>Pick-up</th><th>Status</th><th></th></tr></thead><tbody>'+(x.bs.length?x.bs.map(b=>'<tr data-open="'+b.id+'"><td class="mono">'+b.no+'</td><td>'+esc(b.guest)+'</td><td class="num">'+b.pax+'</td><td class="cl">'+esc(b.item.pickup)+'</td><td>'+pill(ST,b.status)+'</td><td class="act">'+(b.status==='CONFIRMED'&&!b.item.inAt?'<button class="btn sm pri" data-tci="'+b.id+'">Mark arrived</button>':b.item.inAt?'<span class="pill ok">'+b.item.shown+' showed</span>':'')+'</td></tr>').join(''):'<tr class="sub"><td colspan="6" class="muted">No bookings yet.</td></tr>')+'</tbody></table></div>':'')+'</div>'}).join('');
+};
+PAGES.dispatch=()=>{
+  const ds=dayN(S.dispDay),js=vis().filter(b=>b.product==='TRANSPORT'&&iso(b.start)===ds&&['CONFIRMED','COMPLETED'].includes(b.status)).sort((a,b)=>a.start-b.start);
+  const un=js.filter(b=>b.item.assign==='UNASSIGNED').length;
+  const step={ASSIGNED:['ON_THE_WAY','On the way'],ON_THE_WAY:['PICKED_UP','Picked up'],PICKED_UP:['DROPPED_OFF','Dropped off']};
+  const dn=id=>(CAT.TRANSPORT.drivers.find(d=>d.id===id)||{}).name||'';
+  return '<div class="ph"><div><h1>Dispatch board</h1><p>'+fdate(T0+S.dispDay*DAY)+' · '+js.length+' job'+(js.length===1?'':'s')+(un?' · <b style="color:var(--bad)">'+un+' unassigned</b>':'')+'</p></div><div class="acts"><button class="btn" data-dd="-1">← Prev day</button><button class="btn" data-dd="0">Today</button><button class="btn" data-dd="1">Next day →</button></div></div>'+
+  '<div class="card"><div class="tw"><table><thead><tr><th>Pick-up</th><th>Route</th><th>Pax</th><th>Vehicle type</th><th>Driver</th><th>Progress</th><th></th></tr></thead><tbody>'+(js.length?js.map(b=>'<tr data-open="'+b.id+'"><td><b>'+ftime(b.start)+'</b><div class="muted" style="font-size:12px">'+esc(b.guest)+'</div></td><td class="cl">'+esc(b.title)+(b.item.flight?'<div class="muted" style="font-size:12px">flight '+b.item.flight+'</div>':'')+'</td><td class="num">'+b.pax+'</td><td>'+b.item.veh+'</td><td>'+(b.item.driver?esc(dn(b.item.driver))+'<div class="muted" style="font-size:12px">'+esc((CAT.TRANSPORT.vehicles.find(v=>v.id===b.item.vehicle)||{}).plate||'')+'</div>':'<span class="pill bad">Unassigned</span>')+'</td><td>'+({UNASSIGNED:'—',ASSIGNED:'Assigned',ON_THE_WAY:'On the way',PICKED_UP:'Picked up',DROPPED_OFF:'Dropped off'})[b.item.assign]+'</td><td class="act">'+(b.status==='CONFIRMED'?'<button class="btn sm" data-asg="'+b.id+'">'+(b.item.driver?'Change':'Assign')+'</button> '+(step[b.item.assign]?'<button class="btn sm pri" data-stp="'+b.id+'|'+step[b.item.assign][0]+'">'+step[b.item.assign][1]+'</button>':''):'')+'</td></tr>').join(''):'<tr class="sub"><td colspan="7" class="empty">No jobs on this day.</td></tr>')+'</tbody></table></div></div>';
+};
+PAGES.door=()=>{
+  const ds=dayN(S.doorDay||0),g=vis().filter(b=>b.product==='CLUB'&&b.item.visit===ds&&['CONFIRMED','COMPLETED','PENDING'].includes(b.status)).sort((a,b)=>a.item.arrival.localeCompare(b.item.arrival));
+  const conf=g.filter(b=>b.status!=='PENDING'),exp=conf.reduce((a,b)=>a+b.item.guests,0),inn=conf.reduce((a,b)=>a+b.item.inCount,0);
+  return '<div class="ph"><div><h1>Door list</h1><p>'+fdate(T0+(S.doorDay||0)*DAY)+' · '+exp+' guests expected · '+inn+' through the door</p></div><div class="acts"><button class="btn" data-dr="-1">← Prev</button><button class="btn" data-dr="0">Tonight</button><button class="btn" data-dr="1">Next →</button></div></div><div class="card pad" style="margin-bottom:14px"><div class="bars"><div class="bar" style="cursor:default"><span>Checked in</span><span class="tr"><i style="width:'+(exp?Math.round(inn/exp*100):0)+'%"></i></span><span class="c" style="width:auto">'+inn+' / '+exp+'</span></div></div></div>'+
+  '<div class="card"><div class="tw"><table><thead><tr><th>Arrives</th><th>Guest</th><th>Event</th><th>Entry</th><th class="num">Guests</th><th>Table</th><th>Door</th></tr></thead><tbody>'+(g.length?g.map(b=>'<tr data-open="'+b.id+'"><td>'+b.item.arrival+'</td><td class="cl">'+esc(b.guest)+'<div class="muted mono" style="font-size:11.5px">'+b.no+'</div></td><td class="cl">'+esc(b.item.event)+'</td><td>'+esc(b.item.product)+' × '+b.item.qty+'</td><td class="num">'+b.item.guests+'</td><td>'+(b.item.label?'<span class="tag">'+b.item.label+'</span>':b.item.isTable?'<span class="muted">not seated</span>':'')+'</td><td class="act">'+(b.status==='CONFIRMED'&&b.item.inCount<b.item.guests?'<button class="btn sm pri" data-kci="'+b.id+'">Check in ('+b.item.inCount+'/'+b.item.guests+')</button>':b.status==='PENDING'?'<span class="pill warn">Unconfirmed</span>':'<span class="pill ok">'+b.item.inCount+'/'+b.item.guests+' in</span>')+'</td></tr>').join(''):'<tr class="sub"><td colspan="7" class="empty">No bookings for this night.</td></tr>')+'</tbody></table></div></div>';
+};
+
+/* ---------- master data (generic CRUD) ---------- */
+const MD={cities:[],amenities:[],taxes:[],policies:[],hotels:[],vtypes:[],zones:[],routes:[],clubs:[],addons:[],schedules:[]};
+const VEHICLE_TYPES=['Sedan','MPV','Minibus'];
+let MDN=1;const mid=p=>p+(MDN++);
+function initMaster(){
+  ['Ubud','Seminyak','Canggu','Sanur','Nusa Dua','Kuta'].forEach(n=>MD.cities.push({id:mid('ct'),name:n,code:n.slice(0,3).toUpperCase(),country:'ID',status:'ACTIVE'}));
+  ['Swimming pool','Free Wi-Fi','Breakfast included','Spa','Airport pickup','Air conditioning','Parking','Kitchen'].forEach(n=>MD.amenities.push({id:mid('am'),name:n,code:n.slice(0,4).toUpperCase(),status:'ACTIVE'}));
+  MD.taxes.push({id:mid('tx'),code:'VAT',name:'VAT',kind:'TAX',pct:11,applies:'ALL',status:'ACTIVE'});if(APP.product==='HOTEL'||APP.product==='ALL')MD.taxes.push({id:mid('tx'),code:'SVC',name:'Service charge',kind:'SERVICE',pct:10,applies:APP.product==='HOTEL'?'ALL':'HOTEL',status:'ACTIVE'});
+  MD.policies.push({id:mid('cp'),code:'FLEX72',name:'Flexible (72 h)',rules:'72:100, 24:50, 0:0',status:'ACTIVE'},{id:mid('cp'),code:'MOD7',name:'Moderate (7 days)',rules:'168:100, 48:50, 0:0',status:'ACTIVE'},{id:mid('cp'),code:'STRICT',name:'Non-refundable',rules:'0:0',status:'ACTIVE'});
+  MD.hotels.push({id:'h1',code:'H-001',name:CAT.HOTEL.hotel.ubud,stars:5,city:'Ubud',address:'Jl. Contoh No. 1, Ubud',phone:'+62 361 000 111',email:'hello@ubud-heritage.example',status:'ACTIVE'});
+  VEHICLE_TYPES.forEach((n,i)=>MD.vtypes.push({id:mid('vt'),name:n,seats:[3,6,12][i],luggage:[3,5,10][i],status:'ACTIVE'}));
+  ['Ngurah Rai Airport','Ubud','Seminyak','Canggu','Sanur','Nusa Dua'].forEach(n=>MD.zones.push({id:mid('zn'),name:n,code:n.slice(0,3).toUpperCase(),status:'ACTIVE'}));
+  [['Ngurah Rai Airport','Ubud','Sedan',450000],['Ngurah Rai Airport','Seminyak','Sedan',380000],['Ngurah Rai Airport','Canggu','MPV',520000],['Ngurah Rai Airport','Nusa Dua','Minibus',640000]].forEach(r=>MD.routes.push({id:mid('rt'),from:r[0],to:r[1],vtype:r[2],price:r[3],status:'ACTIVE'}));
+  MD.clubs.push({id:'cl1',code:'C-001',name:CAT.CLUB.clubs[0],kind:'Lounge',city:'Ubud',opens:'18:00',closes:'02:00',status:'ACTIVE'});
+  MD.addons.push({id:mid('ad'),trip:'Ubud culture day tour',name:'Photo package',price:150000,status:'ACTIVE'},{id:mid('ad'),trip:'Sunrise Batur trek',name:'Breakfast at the crater',price:120000,status:'ACTIVE'});
+  CAT.TRIP.variants=[];CAT.TRIP.trips.forEach((t,i)=>{CAT.TRIP.variants.push({id:'tv'+i+'a',tripId:t.id,name:'Standard (shared)',adult:t.adult,child:t.child,status:'ACTIVE'});if(i===0)CAT.TRIP.variants.push({id:'tv'+i+'b',tripId:t.id,name:'Private tour',adult:1100000,child:700000,status:'ACTIVE'})});
+  CAT.TRIP.trips.forEach((t,i)=>{t.code='T-00'+(i+1);t.duration=t.id==='t2'?'6 hours':'9 hours';t.meeting='Hotel pick-up'});
+  CAT.HOTEL.rooms.forEach((r,i)=>{r.code='RT-0'+(i+1);r.hotel='h1';r.maxAdults=r.max});
+  CAT.HOTEL.plans.forEach((p,i)=>{p.code='RP-0'+(i+1);p.minStay=1});
+  CAT.TRANSPORT.services.forEach((s,i)=>{s.code='SV-0'+(i+1)});CAT.TRANSPORT.drivers.forEach((d,i)=>{d.licence='2028-0'+(i+3)+'-30'});
+  CAT.CLUB.tickets.forEach((t,i)=>{t.code='TK-0'+(i+1);t.club='cl1'});CAT.CLUB.tables.forEach((t,i)=>{t.code='TB-0'+(i+1);t.club='cl1'});CAT.CLUB.events.forEach((e,i)=>{e.code='EV-0'+(i+1);e.club='cl1';e.start='21:00'});
+  CAT.TRIP.trips.forEach(t=>{for(let i=0;i<14;i++)MD.schedules.push({id:mid('sc'),trip:t.id,date:dayN(i),time:t.time,quota:t.quota,status:'ACTIVE'})});
+  S.INV={};CAT.HOTEL.rooms.forEach(r=>{S.INV[r.id]={};for(let i=0;i<14;i++)S.INV[r.id][dayN(i)]={total:r.units,stop:false}});
+  seedMedia();
+  const own=[CAT.HOTEL.rooms,CAT.HOTEL.plans,CAT.TRIP.trips,CAT.TRIP.variants,CAT.TRANSPORT.services,CAT.TRANSPORT.drivers,CAT.TRANSPORT.vehicles,CAT.CLUB.tickets,CAT.CLUB.tables,CAT.CLUB.events,MD.hotels,MD.addons,MD.vtypes,MD.zones,MD.routes,MD.clubs,MD.taxes,MD.policies];
+  own.forEach(a=>a.forEach(r=>{r.supplier='s1';r.deleted=false;r.status=r.status||'ACTIVE'}));
+  if(APP.product==='ALL'){ // the operator sees master data of every supplier
+    for(const sid of ['s2','s3']){const idmap={};for(const a of own){const add=[];a.filter(r=>r.supplier==='s1').forEach(r=>{const c=Object.assign({},r,{supplier:sid,id:r.id+'_'+sid});idmap[r.id]=c.id;if(c.code)c.code=c.code;add.push(c)});
+      add.forEach(c=>{['tripId','hotel','club','d'].forEach(k=>{if(c[k]&&idmap[c[k]])c[k]=idmap[c[k]]})});a.push(...add)}}
+    CAT.TRANSPORT.vehicles.filter(v=>v.supplier!=='s1').forEach(v=>{});
+  }
+}
+const SUPNAME=id=>(SUPPLIERS.find(s=>s.id===id)||{}).name||'';
+const NAMEOF=(k,id)=>{const a=resArr(k);const r=a.find(x=>x.id===id);return r?(r.name||r.plate||id):'—'};
+/* resource definitions. src: array holding the rows. f: form fields. c: table columns. */
+const sel=(arrf,lf)=>({t:'ref',opts:arrf,lbl:lf});
+const RES={
+ cities:{l:'Cities',one:'city',src:()=>MD.cities,global:true,f:[{k:'name',l:'Name',req:1,max:80},{k:'code',l:'Code',req:1,max:10,uniq:1},{k:'country',l:'Country code',req:1,max:2}],c:['name','code','country']},
+ amenities:{l:'Amenities',one:'amenity',src:()=>MD.amenities,global:true,f:[{k:'name',l:'Name',req:1,max:80},{k:'code',l:'Code',req:1,max:10,uniq:1}],c:['name','code']},
+ taxes:{l:'Taxes and charges',one:'tax or charge',src:()=>MD.taxes,f:[{k:'code',l:'Code',req:1,max:16,uniq:1},{k:'name',l:'Name',req:1,max:80},{k:'kind',l:'Type',t:'sel',o:[['TAX','Tax'],['SERVICE','Service charge']],req:1},{k:'pct',l:'Percent',t:'num',req:1,min:0,max:100,hint:'Added on top of the price (non-inclusive).'},{k:'applies',l:'Applies to',t:'sel',o:[['ALL','All products'],['HOTEL','Hotel'],['TRIP','Trips'],['TRANSPORT','Transport'],['CLUB','Club']],req:1}],c:['code','name','kind','pct','applies'],note:'New bookings use these rates. Existing bookings keep the rates they were made with.'},
+ policies:{l:'Cancellation policies',one:'policy',src:()=>MD.policies,f:[{k:'code',l:'Code',req:1,max:16,uniq:1},{k:'name',l:'Name',req:1,max:80},{k:'rules',l:'Refund rules',t:'text',req:1,max:200,hint:'hours before start : refund %, comma separated. Example: 72:100, 24:50, 0:0 means 100% back at 72 h or more, 50% at 24 h or more, then nothing.',val:v=>/^\s*\d+\s*:\s*\d+(\s*,\s*\d+\s*:\s*\d+)*\s*$/.test(v)?'':'Use the form 72:100, 24:50, 0:0'}],c:['code','name','rules']},
+ hotels:{l:'Hotels',one:'hotel',src:()=>MD.hotels,f:[{k:'code',l:'Code',req:1,max:16,uniq:1},{k:'name',l:'Name',req:1,max:120},{k:'stars',l:'Star rating',t:'num',min:1,max:5},{k:'city',l:'City',t:'sel',o:()=>MD.cities.map(c=>[c.name,c.name]),req:1},{k:'address',l:'Address',max:200},{k:'phone',l:'Phone',max:40},{k:'email',l:'Email',t:'email',max:120}],c:['code','name','stars','city','phone']},
+ rooms:{l:'Room types',one:'room type',src:()=>CAT.HOTEL.rooms,f:[{k:'code',l:'Code',req:1,max:16,uniq:1},{k:'name',l:'Name',req:1,max:120},{k:'hotel',l:'Hotel',t:'ref',to:'hotels',req:1},{k:'price',l:'Base price per night (IDR)',t:'num',req:1,min:1},{k:'max',l:'Max adults per room',t:'num',req:1,min:1,max:10},{k:'units',l:'Rooms of this type',t:'num',req:1,min:1,max:500,hint:'Default for the inventory grid.'}],c:['code','name','hotel','price','max','units']},
+ plans:{l:'Rate plans',one:'rate plan',src:()=>CAT.HOTEL.plans,f:[{k:'code',l:'Code',req:1,max:16,uniq:1},{k:'name',l:'Name',req:1,max:120},{k:'add',l:'Extra per night (IDR)',t:'num',req:1,min:0,hint:'Added to the room price for every night and room.'},{k:'minStay',l:'Minimum stay (nights)',t:'num',min:1,max:60}],c:['code','name','add','minStay']},
+ trips:{l:'Trips',one:'trip',src:()=>CAT.TRIP.trips,f:[{k:'code',l:'Code',req:1,max:16,uniq:1},{k:'name',l:'Name',req:1,max:150},{k:'time',l:'Start time',t:'time',req:1},{k:'duration',l:'Duration',max:40},{k:'quota',l:'Default seats per departure',t:'num',req:1,min:1,max:500},{k:'meeting',l:'Meeting point',max:200}],c:['code','name','time','duration','quota']},
+ variants:{l:'Trip variants and prices',one:'variant',src:()=>CAT.TRIP.variants,f:[{k:'tripId',l:'Trip',t:'ref',to:'trips',req:1},{k:'name',l:'Variant',req:1,max:100},{k:'adult',l:'Adult price (IDR)',t:'num',req:1,min:1},{k:'child',l:'Child price (IDR)',t:'num',req:1,min:0}],c:['tripId','name','adult','child']},
+ addons:{l:'Trip add-ons',one:'add-on',src:()=>MD.addons,f:[{k:'trip',l:'Trip',req:1,max:150},{k:'name',l:'Add-on',req:1,max:100},{k:'price',l:'Price (IDR)',t:'num',req:1,min:0}],c:['trip','name','price']},
+ schedules:{l:'Departure schedule',one:'departure',src:()=>MD.schedules,f:[{k:'trip',l:'Trip',t:'ref',to:'trips',req:1},{k:'date',l:'Date',t:'date',req:1},{k:'time',l:'Start time',t:'time',req:1},{k:'quota',l:'Seats',t:'num',req:1,min:1,max:500}],c:['trip','date','time','quota'],sortk:'date'},
+ vtypes:{l:'Vehicle types',one:'vehicle type',src:()=>MD.vtypes,f:[{k:'name',l:'Name',req:1,max:60,uniq:1},{k:'seats',l:'Seats',t:'num',req:1,min:1,max:60},{k:'luggage',l:'Luggage',t:'num',min:0,max:60}],c:['name','seats','luggage']},
+ zones:{l:'Zones',one:'zone',src:()=>MD.zones,f:[{k:'code',l:'Code',req:1,max:10,uniq:1},{k:'name',l:'Name',req:1,max:80}],c:['code','name']},
+ services:{l:'Services',one:'service',src:()=>CAT.TRANSPORT.services,f:[{k:'code',l:'Code',req:1,max:16,uniq:1},{k:'name',l:'Name',req:1,max:120},{k:'veh',l:'Vehicle type',t:'sel',o:()=>MD.vtypes.filter(v=>!v.deleted).map(v=>[v.name,v.name]),req:1},{k:'price',l:'Price (IDR)',t:'num',req:1,min:1},{k:'max',l:'Max passengers',t:'num',req:1,min:1,max:60}],c:['code','name','veh','price','max']},
+ routes:{l:'Zone route prices',one:'route price',src:()=>MD.routes,f:[{k:'from',l:'From zone',t:'sel',o:()=>MD.zones.map(z=>[z.name,z.name]),req:1},{k:'to',l:'To zone',t:'sel',o:()=>MD.zones.map(z=>[z.name,z.name]),req:1,val:(v,r)=>v===r.from?'Choose a different zone':''},{k:'vtype',l:'Vehicle type',t:'sel',o:()=>MD.vtypes.map(z=>[z.name,z.name]),req:1},{k:'price',l:'Price (IDR)',t:'num',req:1,min:1}],c:['from','to','vtype','price']},
+ drivers:{l:'Drivers',one:'driver',src:()=>CAT.TRANSPORT.drivers,f:[{k:'name',l:'Full name',req:1,max:120},{k:'phone',l:'Phone',req:1,max:40},{k:'licence',l:'Licence expiry',t:'date',req:1,val:v=>v<dayN(0)?'The licence has expired':''}],c:['name','phone','licence']},
+ vehicles:{l:'Vehicles',one:'vehicle',src:()=>CAT.TRANSPORT.vehicles,f:[{k:'plate',l:'Plate number',req:1,max:20,uniq:1},{k:'type',l:'Vehicle type',t:'sel',o:()=>MD.vtypes.map(z=>[z.name,z.name]),req:1},{k:'d',l:'Usual driver',t:'ref',to:'drivers'}],c:['plate','type','d']},
+ clubs:{l:'Clubs',one:'club',src:()=>MD.clubs,f:[{k:'code',l:'Code',req:1,max:16,uniq:1},{k:'name',l:'Name',req:1,max:120},{k:'kind',l:'Kind',t:'sel',o:[['Lounge','Lounge'],['Beach club','Beach club'],['Night club','Night club'],['Bar','Bar']],req:1},{k:'city',l:'City',t:'sel',o:()=>MD.cities.map(c=>[c.name,c.name])},{k:'opens',l:'Opens',t:'time'},{k:'closes',l:'Closes',t:'time'}],c:['code','name','kind','city','opens']},
+ tickets:{l:'Ticket types',one:'ticket type',src:()=>CAT.CLUB.tickets,f:[{k:'code',l:'Code',req:1,max:16,uniq:1},{k:'name',l:'Name',req:1,max:100},{k:'club',l:'Club',t:'ref',to:'clubs',req:1},{k:'price',l:'Price (IDR)',t:'num',req:1,min:0},{k:'quota',l:'Tickets per night',t:'num',req:1,min:1,max:5000}],c:['code','name','price','quota']},
+ tables:{l:'Table packages',one:'table package',src:()=>CAT.CLUB.tables,f:[{k:'code',l:'Code',req:1,max:16,uniq:1},{k:'name',l:'Name',req:1,max:100},{k:'club',l:'Club',t:'ref',to:'clubs',req:1},{k:'price',l:'Price or minimum spend (IDR)',t:'num',req:1,min:0},{k:'cap',l:'Seats per table',t:'num',req:1,min:1,max:50},{k:'quota',l:'Tables per night',t:'num',req:1,min:1,max:500}],c:['code','name','price','cap','quota']},
+ cevents:{l:'Events',one:'event',src:()=>CAT.CLUB.events,f:[{k:'code',l:'Code',req:1,max:16,uniq:1},{k:'name',l:'Title',req:1,max:150},{k:'club',l:'Club',t:'ref',to:'clubs',req:1},{k:'off',l:'Days from today',t:'num',req:1,min:0,max:365,hint:'0 = tonight. The real app stores a date.'},{k:'start',l:'Starts',t:'time'}],c:['code','name','off','start']},
+};
+if(APP.product!=='ALL'){RES.rooms.f=RES.rooms.f.filter(f=>f.k!=='hotel');RES.rooms.c=RES.rooms.c.filter(c=>c!=='hotel');RES.taxes.f=RES.taxes.f.filter(f=>f.k!=='applies');RES.taxes.c=RES.taxes.c.filter(c=>c!=='applies')}
+
+const resArr=k=>RES[k].src();
+const MDGROUPS={
+ HOTEL:[['Hotel',['rooms','plans','inventory']]],TRIP:[['Trips',['trips','variants','addons','schedules']]],TRANSPORT:[['Transport',['vtypes','zones','services','routes','drivers','vehicles']]],CLUB:[['Club',['clubs','tickets','tables','cevents']]],
+ ALL:[['Hotel',['hotels','rooms','plans','inventory']],['Trips',['trips','variants','addons','schedules']],['Transport',['vtypes','zones','services','routes','drivers','vehicles']],['Club',['clubs','tickets','tables','cevents']]]};
+const SHARED=['cities','amenities','taxes','policies'];
+const MDLABEL=k=>k==='inventory'?'Room inventory':RES[k].l;
+const live=(k,sup)=>resArr(k).filter(r=>!r.deleted&&r.status!=='INACTIVE'&&(!r.supplier||r.supplier===sup));
+const curSup=()=>{if(APP.product!=='ALL')return 's1';const e=document.getElementById('nsup');return e?e.value:(S.mdSup||'s1')};
+const refLabel=(f,v)=>{if(!v)return '—';const r=resArr(f.to).find(x=>x.id===v);return r?(r.name||r.plate):'?'};
+const cellOf=(k,r,col)=>{const f=RES[k].f.find(x=>x.k===col);const v=r[col];if(!f)return esc(v);if(f.t==='ref')return esc(refLabel(f,v));if(f.t==='num'&&/price|add|adult|child/.test(col))return fmt(v);if(col==='kind')return v==='TAX'?'Tax':v==='SERVICE'?'Service charge':esc(v);if(col==='pct')return v+'%';if(col==='applies')return v==='ALL'?'All products':esc(PRODUCTS[v]?PRODUCTS[v].label:v);if(col==='off')return v===0?'tonight':'in '+v+' days';return esc(v??'—')};
+function usage(k,r){const B=S.B.filter(b=>!b.deleted);const m={rooms:b=>b.item.roomId===r.id,hotels:b=>b.product==='HOTEL'&&b.supplier.id===r.supplier&&b.item.hotel===r.name,trips:b=>b.item.tripId===r.id,services:b=>b.item.service===r.name,drivers:b=>b.item.driver===r.id,vehicles:b=>b.item.vehicle===r.id,tickets:b=>b.item.product===r.name,tables:b=>b.item.product===r.name,cevents:b=>b.item.event===r.name,clubs:b=>b.item.club===r.name};return m[k]?B.filter(m[k]).length:0}
+function mdPage(k){
+  const R=RES[k],st=S.mdf[k]||{q:'',s:'ACTIVE',sup:''};S.mdf[k]=st;const ro=false,q=st.q.toLowerCase();
+  let rows=resArr(k).filter(r=>(isOp()?(!st.sup||r.supplier===st.sup):(!r.supplier||r.supplier==='s1'))&&(st.s==='DELETED'?r.deleted:!r.deleted&&(st.s==='ALL'||(r.status||'ACTIVE')===st.s))&&(!st.q2||(st.q2==='PHOTO'?!hasImg(r):!hasDesc(r)))&&(!q||R.c.some(c=>String(cellOf(k,r,c)).toLowerCase().includes(q))));
+  if(R.sortk)rows.sort((a,b)=>String(a[R.sortk]).localeCompare(b[R.sortk]));
+  const th=(R.img?'<th></th>':'')+R.f.filter(f=>R.c.includes(f.k)).map(f=>'<th'+(f.t==='num'?' class="num"':'')+'>'+f.l.replace(/ \(IDR\)/,'')+'</th>').join('');
+  return '<div class="ph"><div><h1>'+R.l+'</h1><p>'+rows.length+' record'+(rows.length===1?'':'s')+(ro?' · shared reference data, managed by the platform operator':'')+'</p></div><div class="acts"><button class="btn" data-mdx="'+k+'">Export CSV</button>'+(ro?'':'<button class="btn pri" data-mdnew="'+k+'">+ New '+R.one+'</button>')+'</div></div>'+(R.note?'<div class="note">'+R.note+'</div>':'')+
+  '<div class="tools"><input type="search" data-mdq="'+k+'" placeholder="Search" value="'+esc(st.q)+'" aria-label="Search"><select data-mds="'+k+'" aria-label="Status"><option value="ACTIVE"'+(st.s==='ACTIVE'?' selected':'')+'>Active</option><option value="INACTIVE"'+(st.s==='INACTIVE'?' selected':'')+'>Inactive</option><option value="ALL"'+(st.s==='ALL'?' selected':'')+'>All live</option>'+(isStaff()?'':'<option value="DELETED"'+(st.s==='DELETED'?' selected':'')+'>Deleted</option>')+'</select>'+(R.img?'<select data-mdq2="'+k+'" aria-label="Listing"><option value="">Any listing</option><option value="PHOTO"'+(st.q2==='PHOTO'?' selected':'')+'>No photo</option><option value="DESC"'+(st.q2==='DESC'?' selected':'')+'>No description</option></select>':'')+(isOp()&&!R.global?'<select data-mdsup="'+k+'" aria-label="Supplier"><option value="">All suppliers</option>'+SUPPLIERS.map(s=>'<option value="'+s.id+'"'+(st.sup===s.id?' selected':'')+'>'+s.name+'</option>').join('')+'</select>':'')+'</div>'+
+  '<div class="card"><div class="tw"><table><thead><tr>'+th+(isOp()&&!R.global?'<th>Supplier</th>':'')+'<th>Status</th><th></th></tr></thead><tbody>'+(rows.length?rows.map(r=>'<tr'+(r.deleted?' class="del"':'')+' data-mdedit="'+k+'|'+r.id+'">'+(R.img?'<td>'+thumb(r)+'</td>':'')+R.f.filter(f=>R.c.includes(f.k)).map(f=>'<td'+(f.t==='num'?' class="num"':' class="cl"')+'>'+cellOf(k,r,f.k)+'</td>').join('')+(isOp()&&!R.global?'<td>'+esc(SUPNAME(r.supplier))+'</td>':'')+'<td>'+(r.deleted?'<span class="pill off">Deleted</span>':r.status==='INACTIVE'?'<span class="pill off">Inactive</span>':'<span class="pill ok">Active</span>')+'</td><td class="act">'+(ro?'':r.deleted?'<button class="btn sm" data-mdrestore="'+k+'|'+r.id+'">Restore</button>':'<button class="btn sm" data-mdtoggle="'+k+'|'+r.id+'">'+(r.status==='INACTIVE'?'Activate':'Deactivate')+'</button>'+(isStaff()?'':' <button class="btn sm ghost" data-mddel="'+k+'|'+r.id+'">Delete</button>'))+'</td></tr>').join(''):'<tr class="sub"><td colspan="9" class="empty">Nothing here yet.</td></tr>')+'</tbody></table></div></div>';
+}
+function mdForm(k,row){
+  const R=RES[k],isNew=!row,v=row||{};const supSel=isOp()&&!R.global&&isNew?fld('Supplier <b>*</b>','<select id="mf-sup">'+SUPPLIERS.map(s=>'<option value="'+s.id+'">'+s.name+'</option>').join('')+'</select>','The operator must choose the supplier this record belongs to.'):'';
+  const inputs=R.f.map(f=>{const val=v[f.k]??(f.t==='num'?'':'');let ctl;
+    if(f.t==='sel'){const o=typeof f.o==='function'?f.o():f.o;ctl='<select id="mf-'+f.k+'"><option value="">Choose…</option>'+o.map(x=>'<option value="'+esc(x[0])+'"'+(String(val)===String(x[0])?' selected':'')+'>'+esc(x[1])+'</option>').join('')+'</select>'}
+    else if(f.t==='ref'){const sup=isNew?'s1':v.supplier;const o=resArr(f.to).filter(x=>!x.deleted&&(isOp()||!x.supplier||x.supplier===sup));ctl='<select id="mf-'+f.k+'"><option value="">'+(f.req?'Choose…':'None')+'</option>'+o.map(x=>'<option value="'+x.id+'"'+(val===x.id?' selected':'')+'>'+esc(x.name||x.plate)+(isOp()&&x.supplier?' · '+esc(SUPNAME(x.supplier)):'')+'</option>').join('')+'</select>'}
+    else if(f.t==='area')ctl='<textarea id="mf-'+f.k+'" rows="4">'+esc(val)+'</textarea>';
+    else if(f.t==='list')ctl='<textarea id="mf-'+f.k+'" rows="4">'+esc((val||[]).join('\n'))+'</textarea>';
+    else if(f.t==='imgs'){S.mdImgs=(v.images||[]).slice();S.mdImgOne=!!f.one;ctl='<div id="mf-images">'+galHtml()+'</div>'}
+    else ctl='<input id="mf-'+f.k+'" type="'+(f.t==='num'?'number':f.t==='date'?'date':f.t==='time'?'time':f.t==='email'?'email':'text')+'" value="'+esc(val)+'"'+(f.min!=null?' min="'+f.min+'"':'')+(f.max!=null&&f.t==='num'?' max="'+f.max+'"':'')+'>';
+    return fld(f.l+(f.req?' <b>*</b>':''),ctl,f.hint)}).join('');
+  return '<div class="sheet" role="dialog" aria-modal="true" aria-label="'+(isNew?'New':'Edit')+' '+R.one+'"><div class="sh"><div><h1 style="font-size:18px">'+(isNew?'New '+R.one:'Edit '+R.one)+'</h1></div><button class="btn ghost" data-x="mdclose" aria-label="Close">✕</button></div><form id="mdform" data-k="'+k+'" data-id="'+(row?row.id:'')+'" novalidate><div class="sb">'+supSel+inputs+'</div><div class="sf"><button type="button" class="btn" data-x="mdclose">Cancel</button><button type="submit" class="btn pri">'+(isNew?'Create':'Save changes')+'</button></div></form></div>';
+}
+function mdSubmit(e){
+  e.preventDefault();const f=e.target,k=f.dataset.k,id=f.dataset.id,R=RES[k],row=id?resArr(k).find(x=>x.id===id):null;
+  f.querySelectorAll('.fld.bad').forEach(x=>{x.classList.remove('bad');const m=x.querySelector('.err');if(m)m.remove()});
+  const sup=row?row.supplier:(isOp()&&!R.global?f.querySelector('#mf-sup').value:(R.global?null:'s1'));const data={};let ok=true;
+  const bad=(key,m)=>{ok=false;const fl=f.querySelector('#mf-'+key).closest('.fld');if(!fl.classList.contains('bad')){fl.classList.add('bad');fl.insertAdjacentHTML('beforeend','<span class="err">'+m+'</span>')}};
+  R.f.forEach(fd=>{if(fd.t==='imgs'){data[fd.k]=(S.mdImgs||[]).slice();return}let v=f.querySelector('#mf-'+fd.k).value.trim();if(fd.t==='list'){data[fd.k]=v.split('\n').map(x=>x.trim()).filter(Boolean);return}if(fd.t==='num'){if(v==='')v=null;else v=Number(v)}data[fd.k]=v});
+  R.f.forEach(fd=>{const v=data[fd.k];if(fd.t==='imgs')return;if(fd.t==='list'){if(v.length>fd.max)bad(fd.k,'At most '+fd.max+' lines');else if(v.some(x=>x.length>120))bad(fd.k,'Each line can be at most 120 characters');return}if(fd.t==='area'&&v&&v.length>fd.max)return bad(fd.k,'At most '+fd.max+' characters');if(fd.req&&(v===null||v===''))return bad(fd.k,'This field is required');if(v===null||v==='')return;
+    if(fd.t==='num'){if(fd.min!=null&&v<fd.min)return bad(fd.k,'Must be at least '+fd.min);if(fd.max!=null&&v>fd.max)return bad(fd.k,'Must be at most '+fd.max)}
+    if(fd.max!=null&&fd.t!=='num'&&String(v).length>fd.max)return bad(fd.k,'At most '+fd.max+' characters');
+    if(fd.t==='email'&&!/^\S+@\S+\.\S+$/.test(v))return bad(fd.k,'Enter a valid email');
+    if(fd.t==='ref'){const t=resArr(fd.to).find(x=>x.id===v);if(t&&t.supplier&&sup&&t.supplier!==sup)return bad(fd.k,'This belongs to another supplier')}
+    if(fd.val){const m=fd.val(v,data);if(m)return bad(fd.k,m)}
+    if(fd.uniq&&resArr(k).some(o=>o!==row&&(o.supplier||null)===(sup||null)&&String(o[fd.k]).toLowerCase()===String(v).toLowerCase()))return bad(fd.k,'This '+fd.l.toLowerCase()+' is already used'+(resArr(k).some(o=>o!==row&&o.deleted&&String(o[fd.k]).toLowerCase()===String(v).toLowerCase())?' by a deleted record. Restore it instead.':'.'))});
+  if(!ok)return;
+  if(row){Object.assign(row,data);auditLog('UPDATE',R.one,data.name||data.code||data.plate||row.id)}
+  else{const n=Object.assign({id:mid(k.slice(0,2)),status:'ACTIVE',deleted:false},data);if(sup)n.supplier=sup;
+    if(k==='taxes'&&!n.applies)n.applies='ALL';if(k==='rooms'){n.hotel=n.hotel||'h1';n.maxAdults=n.max;S.INV[n.id]={};for(let i=0;i<14;i++)S.INV[n.id][dayN(i)]={total:n.units,stop:false}}
+    if(k==='trips'){n.adult=0;n.child=0}
+    resArr(k).push(n);auditLog('CREATE',R.one,data.name||data.code||data.plate||n.id)}
+  closeOv('ov-md');toast(R.one[0].toUpperCase()+R.one.slice(1)+(row?' saved':' created'));render();
+}
+function mdDelete(k,id){const R=RES[k],r=resArr(k).find(x=>x.id===id),n=usage(k,r);
+  dlg('Delete '+R.one+'?',(n?'<div class="note w">'+n+' booking'+(n>1?'s use':' uses')+' this. They keep their own copy of what was booked, but this '+R.one+' can no longer be booked.</div>':'')+'<p style="margin:0">'+esc(r.name||r.code||r.plate)+' will be hidden from lists and booking forms. You can restore it later from the Deleted filter.</p>','<button class="btn" data-x="dlg">Keep it</button><button class="btn bad" data-x="mddodel" data-k="'+k+'" data-id="'+id+'">Delete</button>')}
+/* room inventory grid */
+PAGES.inventory=()=>{
+  const sup=isOp()?(S.mdSup||'s1'):'s1',rooms=live('rooms',sup),rid=S.invRoom&&rooms.find(r=>r.id===S.invRoom)?S.invRoom:(rooms[0]||{}).id;S.invRoom=rid;const r=rooms.find(x=>x.id===rid);
+  const days=Array.from({length:14},(_,i)=>dayN(i));
+  return '<div class="ph"><div><h1>Room inventory</h1><p>Rooms you can sell each night. Sold-out and stop-sell nights cannot be booked.</p></div></div><div class="tools">'+(isOp()?'<select data-invsup aria-label="Supplier">'+SUPPLIERS.map(s=>'<option value="'+s.id+'"'+(sup===s.id?' selected':'')+'>'+s.name+'</option>').join('')+'</select>':'')+'<select data-invroom aria-label="Room type">'+rooms.map(x=>'<option value="'+x.id+'"'+(x.id===rid?' selected':'')+'>'+esc(x.name)+'</option>').join('')+'</select><button class="btn" data-invfill>Set all nights to default ('+(r?r.units:0)+')</button></div>'+
+  (r?'<div class="card"><div class="tw"><table><thead><tr><th>Night</th><th class="num">Total rooms</th><th class="num">Sold</th><th class="num">Available</th><th>Stop sell</th></tr></thead><tbody>'+days.map(d=>{const c=(S.INV[rid]||{})[d]||(S.INV[rid][d]={total:r.units,stop:false}),sold=c.total-stockLeft('room',rid,d,true);return '<tr style="cursor:default"><td>'+fdate(new Date(d).getTime())+'</td><td class="num"><input type="number" min="0" max="500" value="'+c.total+'" data-invtotal="'+d+'" style="width:84px" aria-label="Total rooms on '+d+'"></td><td class="num">'+sold+'</td><td class="num">'+(c.stop?'<span class="pill off">stopped</span>':Math.max(0,c.total-sold))+'</td><td><input type="checkbox" data-invstop="'+d+'"'+(c.stop?' checked':'')+' aria-label="Stop sell on '+d+'"></td></tr>'}).join('')+'</tbody></table></div></div>':'<div class="empty">Add a room type first.</div>');
+};
+for(const k of Object.keys(RES))PAGES['md-'+k]=()=>mdPage(k);
+const TITLES2={};
+
+initMaster();
+
+/* ---------- product content: photos, descriptions, details ---------- */
+const IMG_MAX=6,IMG_BYTES=1500000;
+function artUri(seed,kind,v){let h=0;const s=String(seed)+kind+v;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;
+  const h2=(h+40)%360,sh={room:'<rect x="90" y="150" width="220" height="60" rx="8" fill="#fff" opacity=".85"/><rect x="100" y="125" width="80" height="30" rx="6" fill="#fff" opacity=".6"/><rect x="90" y="210" width="12" height="25" fill="#fff" opacity=".7"/><rect x="298" y="210" width="12" height="25" fill="#fff" opacity=".7"/>',
+  trip:'<path d="M0 230 L110 110 L180 190 L260 90 L400 230Z" fill="#fff" opacity=".8"/><circle cx="320" cy="60" r="26" fill="#fff" opacity=".7"/>',
+  car:'<rect x="70" y="150" width="260" height="55" rx="14" fill="#fff" opacity=".85"/><rect x="110" y="115" width="170" height="45" rx="14" fill="#fff" opacity=".6"/><circle cx="130" cy="210" r="22" fill="#222" opacity=".6"/><circle cx="270" cy="210" r="22" fill="#222" opacity=".6"/>',
+  club:'<path d="M200 0 L120 240 L280 240Z" fill="#fff" opacity=".18"/><path d="M80 0 L20 240 L150 240Z" fill="#fff" opacity=".12"/><circle cx="200" cy="140" r="38" fill="#fff" opacity=".75"/><circle cx="200" cy="140" r="14" fill="#fff"/>',
+  person:'<circle cx="200" cy="105" r="45" fill="#fff" opacity=".8"/><path d="M110 240 Q200 130 290 240Z" fill="#fff" opacity=".8"/>',
+  hotel:'<rect x="110" y="70" width="180" height="170" fill="#fff" opacity=".8"/><rect x="135" y="95" width="30" height="30" fill="currentColor" opacity=".35"/><rect x="185" y="95" width="30" height="30" fill="currentColor" opacity=".35"/><rect x="235" y="95" width="30" height="30" fill="currentColor" opacity=".35"/><rect x="180" y="170" width="40" height="70" fill="currentColor" opacity=".35"/>'}[kind]||'';
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl('+h+',55%,45%)"/><stop offset="1" stop-color="hsl('+h2+',60%,30%)"/></linearGradient></defs><rect width="400" height="240" fill="url(#g)"/>'+sh+'</svg>';
+  return 'data:image/svg+xml;utf8,'+encodeURIComponent(svg)}
+const imgsOf=r=>(r&&r.images)||[];
+const thumb=(r,cls)=>{const i=imgsOf(r)[0];return i?'<img class="th '+(cls||'')+'" src="'+i+'" alt="" loading="lazy">':'<span class="th none" aria-label="No photo">No photo</span>'};
+const FD={desc:{k:'desc',l:'Description',t:'area',max:1000,hint:'Shown to guests on confirmations and the website.'},images:{k:'images',l:'Photos',t:'imgs',hint:'Up to 6. The first photo is the cover.'}};
+const LST=(k,l,hint,max)=>({k,l,t:'list',max:max||10,hint:hint||'One per line.'});
+function mediaFields(){
+  const add=(res,extra,after)=>{const R=RES[res];if(!R)return;const f=R.f;const i=after?f.findIndex(x=>x.k===after)+1:f.length;f.splice(i,0,...extra)};
+  const std=[FD.desc,FD.images];
+  RES.hotels&&add('hotels',[FD.desc,LST('hl','Highlights'),FD.images]);
+  add('rooms',[FD.desc,{k:'bed',l:'Bed type',t:'sel',o:[['King','King'],['Queen','Queen'],['Twin','Twin'],['Double','Double']]},{k:'size',l:'Size (m²)',t:'num',min:5,max:500},{k:'view',l:'View',max:60},LST('amen','Room features','Example: Private pool, Air conditioning, Bathtub.'),FD.images]);
+  add('plans',[FD.desc,LST('incl','Included','Example: Breakfast for two, Late check-out.',8)]);
+  add('trips',[FD.desc,LST('hl','Highlights','What guests will love.',8),LST('incl','Included'),LST('excl','Not included'),{k:'level',l:'Difficulty',t:'sel',o:[['Easy','Easy'],['Moderate','Moderate'],['Challenging','Challenging']]},{k:'minAge',l:'Minimum age',t:'num',min:0,max:18},{k:'langs',l:'Guide languages',max:80,hint:'Example: English, Indonesian.'},LST('bring','What to bring',null,8),FD.images]);
+  add('variants',[FD.desc]);
+  add('addons',[FD.desc]);
+  add('vtypes',[FD.desc,FD.images]);
+  add('services',[FD.desc,LST('incl','Included','Example: Meet and greet, Bottled water, Wi-Fi.',8),FD.images]);
+  add('drivers',[{k:'langs',l:'Languages',max:80},{k:'years',l:'Years driving',t:'num',min:0,max:60},FD.desc,{k:'images',l:'Photo',t:'imgs',one:1,hint:'A profile photo. Shown on the job sheet.'}]);
+  add('vehicles',[{k:'year',l:'Year',t:'num',min:1990,max:2100},{k:'colour',l:'Colour',max:30},{k:'seats',l:'Seats',t:'num',min:1,max:60},FD.desc,FD.images]);
+  add('clubs',[FD.desc,{k:'dress',l:'Dress code',max:100},{k:'minAge',l:'Minimum age',t:'num',min:0,max:30},{k:'music',l:'Music',max:100},LST('hl','Highlights',null,8),FD.images]);
+  add('tickets',[FD.desc,LST('incl','Included',null,8),{k:'images',l:'Photo',t:'imgs',one:1}]);
+  add('tables',[FD.desc,LST('incl','Included','Example: One bottle, Mixers, Dedicated host.',8),{k:'images',l:'Photo',t:'imgs',one:1}]);
+  add('cevents',[FD.desc,LST('lineup','Line-up','Artists or hosts, one per line.',12),{k:'images',l:'Poster',t:'imgs',one:1}]);
+  Object.keys(RES).forEach(k=>{const R=RES[k];if(R.f.some(f=>f.t==='imgs')&&!R.c.includes('_img'))R.img=true});
+}
+function seedMedia(){
+  const n=(r,kind,count)=>{r.images=[];for(let i=0;i<count;i++)r.images.push(artUri(r.id||r.name,kind,i))};
+  const T={bed:['King','King','Twin'],view:['Rice terrace','Garden','Rice field']};
+  MD.hotels.forEach(h=>{h.desc='Boutique hotel set among the rice terraces of Ubud, ten minutes from the town centre.';h.hl=['Infinity pool over the terraces','Free shuttle to Ubud centre','Yoga pavilion'];n(h,'hotel',3)});
+  CAT.HOTEL.rooms.forEach((r,i)=>{r.desc=['A private villa with its own heated pool and an open-air bathroom.','A calm suite with a separate lounge and a garden terrace.','A bright studio with a balcony facing the rice fields.'][i%3];r.bed=T.bed[i%3];r.size=[85,52,34][i%3];r.view=T.view[i%3];r.amen=[['Private pool','Air conditioning','Outdoor bathtub','Smart TV'],['Air conditioning','Garden terrace','Rain shower'],['Balcony','Air conditioning','Work desk']][i%3];n(r,'room',3)});
+  CAT.HOTEL.plans.forEach((p,i)=>{p.desc=['Just the room. Add meals at the restaurant.','Daily breakfast served at the restaurant or in your room.','Breakfast and dinner each day.'][i%3];p.incl=[[],['Breakfast for two'],['Breakfast for two','Three-course dinner']][i%3]});
+  CAT.TRIP.trips.forEach((t,i)=>{t.desc=['A relaxed day through temples, a traditional village and a craft workshop, with lunch.','A pre-dawn climb to watch the sun rise over the crater lake. Includes a hot breakfast.','A full day on the island: viewpoints, a beach stop and time to swim.'][i%3];t.hl=[['Water temple visit','Village walk','Local lunch'],['Sunrise at the summit','Hot spring stop','Volcano views'],['Cliff viewpoints','Snorkelling stop','Boat crossing']][i%3];t.incl=['Hotel pick-up','English-speaking guide','Entrance fees','Bottled water'];t.excl=['Tips','Personal expenses'];t.level=['Easy','Challenging','Moderate'][i%3];t.minAge=[0,10,6][i%3];t.langs='English, Indonesian';t.bring=['Sunscreen','Comfortable shoes','Towel'];n(t,'trip',3)});
+  CAT.TRIP.variants.forEach(v=>{v.desc=v.name==='Private tour'?'Only your group, with a flexible schedule.':'Shared with other guests, up to 12 people.'});
+  MD.addons.forEach(a=>{a.desc='Added to the booking for each guest.'});
+  MD.vtypes.forEach(v=>{v.desc='Seats '+v.seats+' with room for '+v.luggage+' bags.';n(v,'car',1)});
+  CAT.TRANSPORT.services.forEach((s,i)=>{s.desc='A fixed-price private transfer. The driver tracks your flight and waits if it is late.';s.incl=['Meet and greet','Bottled water','Air conditioning','Wi-Fi'];n(s,'car',2)});
+  CAT.TRANSPORT.drivers.forEach((d,i)=>{d.langs=['English, Indonesian','English','English, Japanese','Indonesian'][i%4];d.years=[12,8,5,15][i%4];d.desc='';n(d,'person',1)});
+  CAT.TRANSPORT.vehicles.forEach((v,i)=>{v.year=2019+i%4;v.colour=['White','Silver','Black','White'][i%4];v.seats=[3,6,6,12][i%4];v.desc='Cleaned and checked before every job.';n(v,'car',2)});
+  MD.clubs.forEach(c=>{c.desc='A rooftop lounge with a garden terrace, live DJs at sunset and a cocktail bar.';c.dress='Smart casual. No beachwear.';c.minAge=18;c.music='House, Latin, live DJ sets';c.hl=['Sunset terrace','Live DJ sets','Craft cocktails'];n(c,'club',3)});
+  CAT.CLUB.tickets.forEach(t=>{t.desc=t.name.indexOf('VIP')>=0?'Fast-track entry and access to the upper deck.':'Standard entry for one guest.';t.incl=t.name.indexOf('VIP')>=0?['Fast-track entry','Upper deck access','Welcome drink']:['Entry for one guest'];n(t,'club',1)});
+  CAT.CLUB.tables.forEach(t=>{t.desc='A reserved table with table service for your group.';t.incl=['Reserved table','Dedicated host','Mixers and ice'];n(t,'club',1)});
+  CAT.CLUB.events.forEach((e,i)=>{e.desc=['Golden hour sets on the terrace with a live DJ.','Salsa and bachata with a live band. Lesson at 20:00.','Our monthly full moon night. Two floors, three DJs.','Free drinks for ladies until 22:00.'][i%4];e.lineup=[['DJ Ketut','Sunset horns'],['Banda Latina','DJ Mateo'],['DJ Ketut','DJ Ayu','Fire show'],['DJ Ayu']][i%4];n(e,'club',1)});
+}
+function galHtml(){const a=S.mdImgs||[],one=S.mdImgOne;return '<div class="gal">'+a.map((u,i)=>'<figure><img src="'+u+'" alt="Photo '+(i+1)+'">'+(i===0?'<span class="cov">Cover</span>':'')+'<figcaption>'+(i>0?'<button type="button" class="btn sm" data-imgcover="'+i+'">Make cover</button>':'')+'<button type="button" class="btn sm ghost" data-imgdel="'+i+'">Remove</button></figcaption></figure>').join('')+(a.length<(one?1:IMG_MAX)?'<label class="addimg"><input type="file" id="mf-file" accept="image/jpeg,image/png,image/webp"'+(one?'':' multiple')+' hidden><span>+ Add '+(one?'photo':'photos')+'</span></label>':'')+'</div>'}
+document.addEventListener('click',e=>{const c=e.target.closest('[data-imgcover],[data-imgdel]');if(!c||!S.mdImgs)return;
+  if(c.dataset.imgdel!=null)S.mdImgs.splice(+c.dataset.imgdel,1);else{const i=+c.dataset.imgcover;S.mdImgs.unshift(S.mdImgs.splice(i,1)[0])}
+  const g=document.getElementById('mf-images');if(g)g.innerHTML=galHtml()});
+document.addEventListener('change',e=>{if(e.target.id!=='mf-file')return;const files=[...e.target.files],max=S.mdImgOne?1:IMG_MAX;e.target.value='';
+  const g=()=>{const x=document.getElementById('mf-images');if(x)x.innerHTML=galHtml();const fl=x&&x.closest('.fld');if(fl){fl.classList.remove('bad');const m=fl.querySelector('.err');if(m)m.remove()}};
+  files.forEach(f=>{if(S.mdImgs.length>=max){toast('Up to '+max+' photo'+(max>1?'s':''));return}
+    if(!/^image\/(jpeg|png|webp)$/.test(f.type)){toast(f.name+': use a JPEG, PNG or WebP image');return}
+    if(f.size>IMG_BYTES){toast(f.name+' is larger than 1.5 MB');return}
+    const rd=new FileReader();rd.onload=()=>{if(S.mdImgs.length<max){S.mdImgs.push(rd.result);g()}};rd.readAsDataURL(f)})});
+/* listing quality: used by the filter and by the operator review page */
+const hasImg=r=>imgsOf(r).length>0,hasDesc=r=>!!(r.desc&&r.desc.trim().length>=20);
+const MEDIA_KEYS=['hotels','rooms','plans','trips','services','vehicles','clubs','tickets','tables','cevents','vtypes'];
+PAGES['review']=()=>{const rows=[];MEDIA_KEYS.forEach(k=>{const R=RES[k];if(!R)return;resArr(k).filter(r=>!r.deleted&&r.status!=='INACTIVE').forEach(r=>{const miss=[];if(R.img&&!hasImg(r))miss.push('photo');if(!hasDesc(r))miss.push('description');rows.push({k,r,miss})})});
+  const st=S.rvf||(S.rvf={sup:'',what:'ALL'});const sh=rows.filter(x=>(!st.sup||x.r.supplier===st.sup)&&(st.what==='ALL'?x.miss.length:st.what==='PHOTO'?x.miss.includes('photo'):st.what==='DESC'?x.miss.includes('description'):true));
+  const tot=rows.filter(x=>!st.sup||x.r.supplier===st.sup).length,bad=sh.length;
+  return '<div class="ph"><div><h1>Listing quality</h1><p>Products with no photo or a short description. '+(tot-bad)+' of '+tot+' are complete.</p></div></div><div class="tools"><select data-rvsup aria-label="Supplier"><option value="">All suppliers</option>'+SUPPLIERS.map(s=>'<option value="'+s.id+'"'+(st.sup===s.id?' selected':'')+'>'+s.name+'</option>').join('')+'</select><select data-rvwhat aria-label="Problem"><option value="ALL"'+(st.what==='ALL'?' selected':'')+'>Any problem</option><option value="PHOTO"'+(st.what==='PHOTO'?' selected':'')+'>No photo</option><option value="DESC"'+(st.what==='DESC'?' selected':'')+'>No description</option></select></div>'+
+  '<div class="card"><div class="tw"><table><thead><tr><th>Photo</th><th>Product</th><th>Type</th><th>Supplier</th><th>Missing</th><th></th></tr></thead><tbody>'+(sh.length?sh.slice(0,100).map(x=>'<tr style="cursor:default"><td>'+thumb(x.r)+'</td><td>'+esc(x.r.name||x.r.plate)+'</td><td class="cl">'+esc(RES[x.k].one)+'</td><td>'+esc(SUPNAME(x.r.supplier))+'</td><td>'+x.miss.map(m=>'<span class="pill warn">'+m+'</span>').join(' ')+'</td><td class="act"><button class="btn sm" data-rvopen="'+x.k+'|'+x.r.id+'">Open</button></td></tr>').join(''):'<tr class="sub"><td colspan="6" class="empty">Everything has a photo and a description.</td></tr>')+'</tbody></table></div></div>'};
+document.addEventListener('click',e=>{const o=e.target.closest('[data-rvopen]');if(!o)return;const[k,id]=o.dataset.rvopen.split('|');ov('ov-md',mdForm(k,resArr(k).find(x=>x.id===id)))});
+document.addEventListener('change',e=>{if(e.target.matches('[data-rvsup]')){S.rvf.sup=e.target.value;render()}else if(e.target.matches('[data-rvwhat]')){S.rvf.what=e.target.value;render()}});
+mediaFields();
+function prodOf(b){const it=b.item;if(b.product==='HOTEL')return resArr('rooms').find(r=>r.id===it.roomId);if(b.product==='TRIP')return resArr('trips').find(r=>r.id===it.tripId);if(b.product==='TRANSPORT')return resArr('services').find(r=>r.name===it.service);if(b.product==='CLUB')return resArr('cevents').find(r=>r.name===it.event)}
+function prodCard(b){const r=prodOf(b);if(!r)return '';const first=imgsOf(r)[0];
+  return '<div class="pcard">'+(first?'<img src="'+first+'" alt="">':'')+'<div><strong>'+esc(r.name)+'</strong>'+(r.desc?'<p>'+esc(r.desc)+'</p>':'')+((r.hl||r.incl||r.lineup||[]).length?'<ul>'+(r.hl||r.incl||r.lineup).slice(0,3).map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'')+'</div></div>'}
+
+/* ---------- settings, users, audit ---------- */
+const PW='ChangeMe!2026';
+S.set={hold:60,tz:'Asia/Makassar (UTC+8)',currency:'IDR',source:'ADMIN',reqEmail:false,mailGuest:true,mailSup:true,checkIn:'14:00',checkOut:'12:00',cutoff:6,clash:180,doorClose:'03:00',methods:{CASH:true,BANK_TRANSFER:true,CARD:true,QRIS:true,E_WALLET:false,ROOM_CHARGE:true,OTHER:false},bank:'BCA 000-000-0000 a/n PT Ubud Heritage Wisata'};
+S.biz={name:APP.product==='HOTEL'?CAT.HOTEL.hotel.ubud:SUPPLIERS[0].name,stars:5,legal:'PT Ubud Heritage Wisata',email:'hello@ubud-heritage.example',phone:'+62 361 000 111',tax:'01.234.567.8-901.000',address:'Jl. Contoh No. 1, Ubud, Bali',country:'ID'};
+S.plat={commission:12,hold:60,tz:'Asia/Makassar (UTC+8)',lock:5,pwmin:12,session:15,refresh:7};
+S.sup=SUPPLIERS.map(s=>({id:s.id,code:'SUP-000'+s.id.slice(1),name:s.name,legal:'PT '+s.name.replace(/ Co\.| Group| Collective/,''),email:'hello@'+s.name.split(' ')[0].toLowerCase()+'.example',pct:s.pct,status:'ACTIVE'}));
+const mkU=(email,name,role,sup)=>({id:'u'+(MDN++),email,name,role,sup,pw:PW,status:'ACTIVE',fails:0,must:false,last:null});
+S.users=APP.product==='ALL'?[mkU('superadmin@example.com','Super Admin','OPERATOR',null),mkU('admin@ubud.example','Ubud Admin','ADMIN','s1'),mkU('staff@ubud.example','Ubud Staff','STAFF','s1'),mkU('admin@semi.example','Seminyak Admin','ADMIN','s2'),mkU('staff@semi.example','Seminyak Staff','STAFF','s2'),mkU('admin@canggu.example','Canggu Admin','ADMIN','s3')]:[mkU('admin@ubud.example','Ubud Admin','ADMIN','s1'),mkU('staff@ubud.example','Ubud Staff','STAFF','s1'),mkU('reservations@ubud.example','Reservations Desk','STAFF','s1')];
+S.audit=[];S.user=null;S.mdf={};S.auditQ='';
+function auditLog(action,entity,detail){S.audit.unshift({t:Date.now(),by:S.user?S.user.email:'system',action,entity,detail:String(detail||''),sup:S.user&&S.user.sup||null})}
+const pwErr=p=>p.length<12?'At least 12 characters':!/[a-z]/.test(p)||!/[A-Z]/.test(p)?'Use upper and lower case letters':!/\d/.test(p)?'Include a number':!/[^A-Za-z0-9]/.test(p)?'Include a symbol':'';
+const genPw=()=>{const a='abcdefghijkmnpqrstuvwxyz',A='ABCDEFGHJKLMNPQRSTUVWXYZ';const pick=s=>s[Math.floor(Math.random()*s.length)];return pick(A)+pick(a)+pick(a)+pick(a)+pick(A)+pick(a)+pick(a)+Math.floor(Math.random()*90+10)+'!'+pick(a)+pick(A)+pick(a)};
+const sw=(id,l,on,hint)=>'<div class="fld"><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="'+id+'"'+(on?' checked':'')+' style="transform:scale(1.15)"> '+l+'</label>'+(hint?'<span class="hint">'+hint+'</span>':'')+'</div>';
+const val=(id,v)=>['<input id="'+id+'" value="'+esc(v)+'">'][0];
+const inp=(id,l,v,t,hint,extra)=>fld(l,'<input id="'+id+'" type="'+(t||'text')+'" value="'+esc(v)+'"'+(extra||'')+'>',hint);
+PAGES['set-profile']=()=>{const u=S.user;return '<div class="ph"><div><h1>My profile</h1><p>Your own account.</p></div></div><div class="two"><div class="card pad"><h2>Details</h2><div style="margin-top:10px">'+inp('pf-name','Name',u.name)+fld('Email','<input value="'+esc(u.email)+'" disabled>','Your email is your login. Ask an admin to change it.')+fld('Role','<input value="'+({OPERATOR:'Platform operator (super admin)',ADMIN:APP.product==='ALL'?'Supplier admin':'Admin',STAFF:APP.product==='ALL'?'Supplier staff':'Staff'})[u.role]+'" disabled>')+fld(APP.product==='ALL'?'Supplier':'Business','<input value="'+esc(APP.product==='ALL'?(u.sup?SUPNAME(u.sup):'All suppliers'):S.biz.name)+'" disabled>')+'<button class="btn pri" data-sv="profile">Save</button></div></div>'+
+  '<div class="card pad"><h2>Change password</h2><div style="margin-top:10px">'+inp('pw0','Current password','','password')+inp('pw1','New password','','password','At least 12 characters with upper and lower case letters, a number and a symbol.')+inp('pw2','Repeat new password','','password')+'<button class="btn pri" data-sv="password">Change password</button><p class="muted" style="font-size:12.5px;margin:10px 0 0">Changing it signs out your other devices. Sessions last 15 minutes and refresh quietly for up to 7 days.</p></div></div></div>'};
+PAGES['set-business']=()=>{const b=S.biz,ro=isStaff();return '<div class="ph"><div><h1>Business profile</h1><p>Shown on invoices and booking confirmations.</p></div></div>'+(ro?'<div class="note w">Only admins can change this.</div>':'')+'<div class="card pad" style="max-width:720px"><fieldset style="border:0;padding:0;margin:0"'+(ro?' disabled':'')+'><div class="grid2">'+inp('bz-name',APP.product==='HOTEL'?'Hotel name':'Business name',b.name)+(APP.product==='HOTEL'?fld('Star rating','<select id="bz-stars">'+[5,4,3,2,1].map(n=>'<option value="'+n+'"'+(b.stars===n?' selected':'')+'>'+n+' star'+(n>1?'s':'')+'</option>').join('')+'</select>'):'')+inp('bz-legal','Legal name',b.legal)+inp('bz-email','Email',b.email,'email')+inp('bz-phone','Phone',b.phone)+inp('bz-tax','Tax ID',b.tax)+inp('bz-cty','Country code',b.country)+'</div>'+fld('Address','<textarea id="bz-addr">'+esc(b.address)+'</textarea>')+fld('Logo','<div class="rel" style="margin:0"><span class="muted">No logo uploaded</span><button class="btn sm" type="button" data-sv="logo">Upload…</button></div>','JPEG, PNG or WebP up to the upload limit.')+''+(ro?'':'<button class="btn pri" data-sv="business">Save</button>')+'</fieldset></div>'};
+PAGES['set-booking']=()=>{const s=S.set,ro=isStaff(),p=APP.product;return '<div class="ph"><div><h1>Booking settings</h1><p>How bookings behave for '+esc(S.biz.name)+'.</p></div></div>'+(ro?'<div class="note w">Only admins can change these.</div>':'')+'<div class="two"><div class="card pad"><h2>All bookings</h2><fieldset style="border:0;padding:0;margin:10px 0 0"'+(ro?' disabled':'')+'>'+inp('st-hold','Hold time for pending bookings (minutes)',s.hold,'number','A pending booking holds stock for this long, then expires and gives the stock back.',' min="5" max="1440"')+fld('Default booking source','<select id="st-src">'+SRC.map(x=>'<option value="'+x+'"'+(s.source===x?' selected':'')+'>'+x.replace('_',' ').toLowerCase()+'</option>').join('')+'</select>')+sw('st-email','Require a guest email on every booking',s.reqEmail)+fld('Currency','<input value="'+s.currency+'" disabled>','One currency for the whole back office.')+fld('Time zone','<input value="'+s.tz+'" disabled>','Sets "today" and day boundaries for boards and reports.')+'</fieldset></div>'+
+  '<div class="card pad"><h2>'+(APP.product==='ALL'?'Product rules':PRODUCTS[APP.product].label+' rules')+'</h2><fieldset style="border:0;padding:0;margin:10px 0 0"'+(ro?' disabled':'')+'>'+(p==='HOTEL'||p==='ALL'?'<div class="grid2">'+inp('st-ci','Check-in from',s.checkIn,'time')+inp('st-co','Check-out by',s.checkOut,'time')+'</div>':'')+(p==='TRIP'||p==='ALL'?inp('st-cut',(APP.product==='ALL'?'Close website and OTA sales (hours before departure)':'Close website sales (hours before departure)'),s.cutoff,'number','Phone, walk-in and admin bookings are not affected.',' min="0" max="168"'):'')+(p==='TRANSPORT'||p==='ALL'?inp('st-clash','Driver and vehicle clash window (minutes)',s.clash,'number','A driver or vehicle cannot take two jobs this close together.',' min="30" max="720"'):'')+(p==='CLUB'||p==='ALL'?inp('st-door','Door closes at',s.doorClose,'time'):'')+'</fieldset></div></div>'+(ro?'':'<div style="margin-top:14px"><button class="btn pri" data-sv="booking">Save settings</button></div>')+
+  '<div class="card pad" style="margin-top:14px"><h2>Booking emails</h2><p class="muted" style="margin:6px 0 0">Sent when a booking is made, whatever the source: admin, website, guest app, phone or walk-in.</p><fieldset style="border:0;padding:0;margin:10px 0 0"'+(ro?' disabled':'')+'>'+sw('st-mg','Email the guest a confirmation',s.mailGuest,'Skipped when the booking has no guest email.')+sw('st-ms','Email the supplier about the new booking',s.mailSup,'Goes to '+esc(S.biz.email||'the business email')+'.')+'</fieldset></div>'+
+  '<div class="card pad" style="margin-top:14px"><h2>Booking numbers</h2><p class="muted" style="margin:6px 0 0">Format: a prefix, year and month, then a counter that restarts each month.</p><div style="margin-top:8px">'+Object.keys(PRODUCTS).filter(k=>p==='ALL'||p===k).map(k=>'<span class="tag" style="margin-right:6px">'+PRODUCTS[k].pre+'-'+iso(Date.now()).slice(2,4)+iso(Date.now()).slice(5,7)+'-0001</span>').join('')+'</div></div>'};
+PAGES['set-payments']=()=>{const s=S.set,ro=isStaff();return '<div class="ph"><div><h1>Payment settings</h1><p>Which payment methods staff can record.</p></div></div>'+(ro?'<div class="note w">Only admins can change these.</div>':'')+'<div class="card pad" style="max-width:640px"><fieldset style="border:0;padding:0;margin:0"'+(ro?' disabled':'')+'>'+Object.keys(s.methods).map(m=>sw('pm-'+m,m.replace('_',' ').toLowerCase(),s.methods[m])).join('')+fld('Bank transfer instructions','<textarea id="pm-bank">'+esc(s.bank)+'</textarea>','Shown to staff when a guest pays by bank transfer.')+'<div class="note">Payments are recorded by your team. Online card capture is not part of this version.</div>'+(ro?'':'<button class="btn pri" data-sv="payments">Save</button>')+'</fieldset></div>'};
+const roleName=r=>({OPERATOR:'Operator',ADMIN:'Admin',STAFF:'Staff'})[r];
+PAGES['set-users']=()=>{const rows=S.users.filter(u=>isOp()||u.sup===S.user.sup);return '<div class="ph"><div><h1>Users</h1><p>People who can sign in'+(isOp()?' to the platform':' for '+esc(S.biz.name))+'.</p></div><div class="acts"><button class="btn pri" data-uinvite>+ Add user</button></div></div><div class="card"><div class="tw"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th>'+(isOp()?'<th>Supplier</th>':'')+'<th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody>'+rows.map(u=>'<tr style="cursor:default"><td>'+esc(u.name)+(u.id===S.user.id?' <span class="chip">you</span>':'')+'</td><td class="cl">'+esc(u.email)+'</td><td>'+roleName(u.role)+'</td>'+(isOp()?'<td>'+esc(u.sup?SUPNAME(u.sup):'—')+'</td>':'')+'<td>'+(u.status==='ACTIVE'?'<span class="pill ok">Active</span>':u.status==='LOCKED'?'<span class="pill bad">Locked</span>':'<span class="pill off">Suspended</span>')+(u.must?' <span class="pill warn">must change password</span>':'')+'</td><td>'+(u.last?fdt(u.last):'never')+'</td><td class="act">'+(u.id===S.user.id?'':'<button class="btn sm" data-ureset="'+u.id+'">Reset password</button> <button class="btn sm '+(u.status==='ACTIVE'?'':'pri')+'" data-utoggle="'+u.id+'">'+(u.status==='ACTIVE'?'Suspend':'Activate')+'</button>')+'</td></tr>').join('')+'</tbody></table></div></div><p class="muted" style="margin-top:10px">An admin can add staff and other admins. Suspending someone signs them out immediately.</p>'};
+PAGES['set-audit']=()=>{const q=S.auditQ.toLowerCase(),rows=S.audit.filter(a=>(isOp()||a.sup===S.user.sup||(!a.sup&&a.by===S.user.email))&&(!q||(a.by+a.action+a.entity+a.detail).toLowerCase().includes(q))).slice(0,80);return '<div class="ph"><div><h1>Audit log</h1><p>Who changed what, newest first. This list cannot be edited.</p></div></div><div class="tools"><input type="search" id="aq" placeholder="Search user, action or record" value="'+esc(S.auditQ)+'"></div><div class="card"><div class="tw"><table><thead><tr><th>When</th><th>User</th><th>Action</th><th>Record</th><th>Detail</th></tr></thead><tbody>'+(rows.length?rows.map(a=>'<tr style="cursor:default"><td>'+fdt(a.t)+'</td><td class="cl">'+esc(a.by)+'</td><td><span class="tag">'+a.action+'</span></td><td>'+esc(a.entity)+'</td><td class="cl">'+esc(a.detail)+'</td></tr>').join(''):'<tr class="sub"><td colspan="5" class="empty">Nothing yet. Make a change and it shows up here.</td></tr>')+'</tbody></table></div></div>'};
+PAGES['set-suppliers']=()=>'<div class="ph"><div><h1>Supplier accounts</h1><p>Create suppliers, set commission and suspend access.</p></div><div class="acts"><button class="btn pri" data-supnew>+ New supplier</button></div></div><div class="card"><div class="tw"><table><thead><tr><th>Code</th><th>Name</th><th>Email</th><th class="num">Commission %</th><th>Status</th><th></th></tr></thead><tbody>'+S.sup.map(s=>'<tr data-supedit="'+s.id+'"><td class="mono">'+s.code+'</td><td>'+esc(s.name)+'</td><td class="cl">'+esc(s.email)+'</td><td class="num">'+s.pct+'</td><td>'+(s.status==='ACTIVE'?'<span class="pill ok">Active</span>':'<span class="pill off">Suspended</span>')+'</td><td class="act"><button class="btn sm" data-suptoggle="'+s.id+'">'+(s.status==='ACTIVE'?'Suspend':'Activate')+'</button></td></tr>').join('')+'</tbody></table></div></div><p class="muted" style="margin-top:10px">Suspending a supplier stops its users from signing in and ends their sessions. Their data stays.</p>';
+PAGES['set-platform']=()=>{const p=S.plat;return '<div class="ph"><div><h1>Platform settings</h1><p>Defaults for every supplier. Only the operator sees this.</p></div></div><div class="two"><div class="card pad"><h2>Defaults</h2><div style="margin-top:10px">'+inp('pl-com','Default commission for new suppliers (%)',p.commission,'number','',' min="0" max="100" step="0.5"')+inp('pl-hold','Default hold time (minutes)',p.hold,'number','',' min="5" max="1440"')+fld('Time zone','<input value="'+p.tz+'" disabled>')+'</div></div><div class="card pad"><h2>Security</h2><div style="margin-top:10px">'+inp('pl-lock','Lock an account after failed sign-ins',p.lock,'number','The account locks for 15 minutes.',' min="3" max="20"')+inp('pl-pw','Minimum password length',p.pwmin,'number','',' min="10" max="64"')+fld('Access token lifetime (minutes)','<input value="'+p.session+'" disabled>')+fld('Refresh session (days)','<input value="'+p.refresh+'" disabled>')+'</div></div></div><div style="margin-top:14px"><button class="btn pri" data-sv="platform">Save</button></div>'};
+/* ---------- login ---------- */
+let LOGIN={err:'',tries:{}};
+function loginView(){
+  const accts=S.users.filter(u=>u.status==='ACTIVE').slice(0,APP.product==='ALL'?3:3);
+  return '<div class="login"><form class="lcard" id="lf" novalidate><div class="brand" style="padding:0 0 6px"><i>'+APP.mark+'</i><span style="color:var(--fg)">'+APP.name+'<small style="color:var(--muted)">'+APP.sub+'</small></span></div><h1 style="font-size:20px;margin:14px 0 4px">Sign in</h1><p class="muted" style="margin:0 0 14px">'+(APP.product==='ALL'?'For platform operators.':'Use the account your admin gave you.')+'</p>'+
+  (LOGIN.err?'<div class="note w" role="alert" style="background:var(--bad-soft);color:var(--bad)">'+esc(LOGIN.err)+'</div>':'')+
+  fld('Email','<input type="email" id="le" autocomplete="username" value="'+esc(LOGIN.email||'')+'" autofocus>')+fld('Password','<div style="display:flex;gap:6px"><input type="password" id="lp" autocomplete="current-password" style="flex:1"><button type="button" class="btn" data-lshow aria-label="Show password">Show</button></div>')+
+  '<button class="btn pri" type="submit" style="width:100%;margin-top:4px">Sign in</button><div style="text-align:center;margin-top:10px"><button type="button" class="btn ghost sm" data-lforgot>Forgot password?</button></div>'+
+  '<div class="demoacc"><b>Demo accounts</b> <span class="muted">(password <span class="mono">'+PW+'</span>)</span>'+accts.map(u=>'<button type="button" class="rel" style="width:100%;background:none;cursor:pointer;text-align:left;margin:6px 0 0" data-lfill="'+u.email+'"><span><span class="mono">'+u.email+'</span></span><span class="pill info">'+roleName(u.role)+'</span></button>').join('')+'</div></form></div>';
+}
+function doLogin(e){
+  e.preventDefault();const em=$('#le').value.trim().toLowerCase(),pw=$('#lp').value;LOGIN.email=em;
+  if(!em||!pw){LOGIN.err='Enter your email and password.';return render()}
+  const u=S.users.find(x=>x.email===em),generic='Wrong email or password.';
+  if(u&&u.status==='LOCKED'){LOGIN.err='This account is locked after too many attempts. Try again in 15 minutes or ask an admin to reset it.';return render()}
+  if(!u||u.pw!==pw){if(u){u.fails++;if(u.fails>=S.plat.lock){u.status='LOCKED';LOGIN.err='Too many attempts. The account is locked for 15 minutes.';return render()}}LOGIN.err=generic+(u?' '+(S.plat.lock-u.fails)+' attempt(s) left.':'');return render()}
+  if(u.status==='SUSPENDED'){LOGIN.err='This account is suspended. Contact your admin.';return render()}
+  if(u.sup&&S.sup.find(s=>s.id===u.sup).status!=='ACTIVE'){LOGIN.err='Your supplier account is suspended.';return render()}
+  u.fails=0;u.last=Date.now();S.user=u;S.role=u.role;LOGIN.err='';auditLog('LOGIN','User',u.email);S.page='dashboard';location.hash='dashboard';root.innerHTML='';render();
+  if(u.must){pwDlg(true)}
+}
+function pwDlg(forced){dlg('Choose a new password','<div class="note">'+(forced?'You are using a temporary password. Set your own to continue.':'')+'</div>'+fld('New password','<input type="password" id="np1">','At least 12 characters with upper and lower case letters, a number and a symbol.')+fld('Repeat','<input type="password" id="np2">'),'<button class="btn pri" data-x="dopw">Save password</button>')}
+function logout(){auditLog('LOGOUT','User',S.user.email);S.user=null;closeOv('ov-detail');closeOv('ov-dlg');closeOv('ov-new');closeOv('ov-md');S.detail=null;root.innerHTML='';LOGIN={err:'',tries:{}};render()}
+/* ---------- settings actions ---------- */
+function saveSettings(w){
+  const v=id=>($('#'+id)||{}).value,c=id=>($('#'+id)||{}).checked;
+  if(w==='profile'){if(!v('pf-name').trim())return toast('Name is required',1);S.user.name=v('pf-name').trim();auditLog('UPDATE','Profile',S.user.email);toast('Profile saved');render()}
+  if(w==='password'){if(v('pw0')!==S.user.pw)return toast('The current password is wrong',1);const m=pwErr(v('pw1'));if(m)return toast('New password: '+m.toLowerCase(),1);if(v('pw1')!==v('pw2'))return toast('The two new passwords do not match',1);if(v('pw1')===S.user.pw)return toast('Choose a different password',1);S.user.pw=v('pw1');S.user.must=false;auditLog('PASSWORD','User',S.user.email);toast('Password changed. Other devices are signed out.');render()}
+  if(w==='business'){const em=v('bz-email');if(!v('bz-name').trim())return toast('Business name is required',1);if(em&&!/^\S+@\S+\.\S+$/.test(em))return toast('Enter a valid email',1);Object.assign(S.biz,{stars:$('#bz-stars')?Number(v('bz-stars')):S.biz.stars,name:v('bz-name'),legal:v('bz-legal'),email:em,phone:v('bz-phone'),tax:v('bz-tax'),country:v('bz-cty'),address:v('bz-addr')});auditLog('UPDATE','Business profile',S.biz.name);toast('Business profile saved')}
+  if(w==='logo')toast('Upload works in the real app (stored with the media library).');
+  if(w==='booking'){const h=Number(v('st-hold'));if(!(h>=5&&h<=1440))return toast('Hold time must be between 5 and 1440 minutes',1);S.set.hold=h;S.set.source=v('st-src');S.set.reqEmail=c('st-email');S.set.mailGuest=c('st-mg');S.set.mailSup=c('st-ms');if($('#st-ci')){S.set.checkIn=v('st-ci');S.set.checkOut=v('st-co')}if($('#st-cut'))S.set.cutoff=Number(v('st-cut'));if($('#st-clash'))S.set.clash=Number(v('st-clash'));if($('#st-door'))S.set.doorClose=v('st-door');auditLog('UPDATE','Booking settings','hold '+h+' min');toast('Settings saved. New bookings use them.')}
+  if(w==='payments'){Object.keys(S.set.methods).forEach(m=>S.set.methods[m]=c('pm-'+m));if(!Object.values(S.set.methods).some(Boolean))return toast('Keep at least one payment method on',1);S.set.bank=v('pm-bank');auditLog('UPDATE','Payment settings','');toast('Payment settings saved')}
+  if(w==='platform'){const p=S.plat;p.commission=Number(v('pl-com'));p.hold=Number(v('pl-hold'));p.lock=Number(v('pl-lock'));p.pwmin=Number(v('pl-pw'));auditLog('UPDATE','Platform settings','');toast('Platform settings saved')}
+}
+function inviteDlg(){dlg('Add a user',fld('Name <b>*</b>','<input id="iu-n">')+fld('Email <b>*</b>','<input type="email" id="iu-e">')+fld('Role','<select id="iu-r"><option value="STAFF">Staff</option><option value="ADMIN">Admin</option></select>','Staff cannot refund, delete, change settings or see reports.')+(isOp()?fld('Supplier <b>*</b>','<select id="iu-s">'+S.sup.map(s=>'<option value="'+s.id+'">'+s.name+'</option>').join('')+'</select>'):''),'<button class="btn" data-x="dlg">Cancel</button><button class="btn pri" data-x="doinvite">Create user</button>')}
+function supDlg(s){dlg(s?'Edit supplier':'New supplier',fld('Name <b>*</b>','<input id="sp-n" value="'+esc(s?s.name:'')+'">')+fld('Email <b>*</b>','<input type="email" id="sp-e" value="'+esc(s?s.email:'')+'">')+fld('Commission %','<input type="number" id="sp-c" min="0" max="100" step="0.5" value="'+(s?s.pct:S.plat.commission)+'">','Copied onto each new booking. Changing it does not rewrite old bookings.')+(s?'':'<div class="note">An admin user is created for the supplier with a temporary password you can hand over once.</div>'),'<button class="btn" data-x="dlg">Cancel</button><button class="btn pri" data-x="dosup" data-id="'+(s?s.id:'')+'">'+(s?'Save':'Create supplier')+'</button>')}
+
+/* ---------- overlays ---------- */
+function ov(id,html,center){closeOv(id);const d=document.createElement('div');d.className='ov'+(center?' c':'');d.id=id;d.innerHTML=html;d.addEventListener('mousedown',e=>{if(e.target===d&&id!=='ov-detail')closeOv(id);else if(e.target===d)closeDetail()});document.body.append(d);const f=d.querySelector('[autofocus],input,select,button.pri');if(f&&center)f.focus();return d}
+function closeOv(id){const e=document.getElementById(id);if(e)e.remove()}
+function closeDetail(){S.detail=null;closeOv('ov-detail')}
+function dlg(title,body,foot){return ov('ov-dlg','<div class="dlg" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><h2 style="font-size:16px;margin-bottom:12px">'+esc(title)+'</h2>'+body+'<div class="acts" style="justify-content:flex-end;margin-top:14px">'+foot+'</div></div>',true)}
+const fld=(l,inner,hint)=>'<div class="fld"><label>'+l+'</label>'+inner+(hint?'<span class="hint">'+hint+'</span>':'')+'</div>';
+/* ---------- booking detail ---------- */
+function openDetail(id){S.detail=id;ov('ov-detail','<div class="sheet" role="dialog" aria-modal="true" aria-label="Booking detail" id="sheet"></div>');refreshDetail()}
+function refreshDetail(){
+  const b=find(S.detail),sh=$('#sheet');if(!b||!sh)return;
+  const cc=canCancel(b),live=['PENDING','CONFIRMED'].includes(b.status),fin=['CANCELLED','EXPIRED','COMPLETED','NO_SHOW'].includes(b.status);
+  const acts=[];
+  if(b.status==='PENDING')acts.push('<button class="btn pri" data-a="confirm">Confirm</button>');
+  if(b.status==='CONFIRMED'){acts.push('<button class="btn" data-a="complete">Mark completed</button>','<button class="btn" data-a="noshow">No-show</button>')}
+  if(live)acts.push('<button class="btn bad" data-a="cancel"'+(cc&&isStaff()&&b.status==='CONFIRMED'?' title="'+esc(cc)+'"':'')+'>Cancel…</button>');
+  if(fin&&!isStaff())acts.push('<button class="btn ghost" data-a="'+(b.deleted?'restore':'delete')+'">'+(b.deleted?'Restore':'Delete')+'</button>');
+  const it=b.item;let ops='';
+  if(b.product==='HOTEL'&&b.status==='CONFIRMED'){ops=!it.inAt?'<button class="btn sm pri" data-ci="'+b.id+'">Check in…</button>':!it.outAt?'<button class="btn sm pri" data-co="'+b.id+'">Check out</button>':''}
+  if(b.product==='TRIP'&&b.status==='CONFIRMED'&&!it.inAt)ops='<button class="btn sm pri" data-tci="'+b.id+'">Mark arrived…</button>';
+  if(b.product==='TRANSPORT'&&b.status==='CONFIRMED')ops='<button class="btn sm" data-asg="'+b.id+'">'+(it.driver?'Change driver':'Assign driver')+'</button>';
+  if(b.product==='CLUB'&&b.status==='CONFIRMED'&&it.inCount<it.guests)ops='<button class="btn sm pri" data-kci="'+b.id+'">Check in…</button>';
+  let items='';
+  if(b.product==='HOTEL')items=[['Hotel',it.hotel],['Room type',it.room+(it.rooms>1?' × '+it.rooms:'')],['Rate plan',it.plan],['Stay',it.checkIn+' → '+it.checkOut+' ('+it.nights+' night'+(it.nights>1?'s':'')+')'],['Guests',it.adults+' adult'+(it.adults>1?'s':'')+(it.children?', '+it.children+' child':'')],['Room number',it.roomNo||'not assigned'],['Checked in',it.inAt?fdt(it.inAt):'—'],['Checked out',it.outAt?fdt(it.outAt):'—']];
+  if(b.product==='TRIP')items=[['Trip',it.trip],['Departure',it.date+' at '+it.time],['Guests',it.adults+' adult'+(it.adults>1?'s':'')+(it.children?', '+it.children+' child':'')],['Pick-up',it.pickup],['Arrived',it.inAt?it.shown+' of '+b.pax+' at '+ftime(it.inAt):'—']];
+  if(b.product==='TRANSPORT'){const d=CAT.TRANSPORT.drivers.find(x=>x.id===it.driver),v=CAT.TRANSPORT.vehicles.find(x=>x.id===it.vehicle);items=[['Service',it.service],['Pick-up',fdt(it.pickupAt)],['From',it.pickup],['To',it.dropoff],['Flight',it.flight||'—'],['Passengers',it.pax+' · '+it.luggage+' bags'],['Driver',d?d.name+' · '+d.phone:'not assigned'],['Vehicle',v?v.plate+' ('+v.type+')':'—'],['Progress',it.assign.replace('_',' ').toLowerCase()]];}
+  if(b.product==='CLUB')items=[['Club',it.club],['Event',it.event],['Entry',it.product+' × '+it.qty],['Visit date',it.visit+' · arrives about '+it.arrival],['Guests',it.guests],['Table',it.label||(it.isTable?'not seated':'—')],['Door',it.inCount+' of '+it.guests+' checked in']];
+  const supLine=isOp()?'<dt>Supplier</dt><dd>'+esc(b.supplier.name)+' · commission '+b.pct+'%</dd>':'';
+  sh.innerHTML='<div class="sh"><div><div class="mono" style="font-size:13px">'+b.no+(b.deleted?' · deleted':'')+'</div><h1 style="font-size:18px;margin-top:2px">'+esc(b.guest)+'</h1><div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">'+pill(ST,b.status)+pill(PY,b.pay)+'<span class="chip">'+b.source.replace('_',' ').toLowerCase()+'</span></div></div><button class="btn ghost" data-a="close" aria-label="Close">✕</button></div><div class="sb">'+
+  (b.status==='PENDING'&&b.hold?'<div class="note w">Holding stock. Expires in '+Math.max(0,Math.round((b.hold-Date.now())/6e4))+' minutes unless confirmed.</div>':'')+(b.cancelReason?'<div class="note w">Cancelled: '+esc(b.cancelReason)+'</div>':'')+
+  '<div class="acts" style="margin-bottom:6px">'+acts.join('')+'</div>'+
+  '<div class="sec">Guest</div><dl class="dl"><dt>Name</dt><dd>'+esc(b.guest)+'</dd><dt>Email</dt><dd>'+esc(b.email)+'</dd><dt>Phone</dt><dd>'+esc(b.phone)+'</dd><dt>Country</dt><dd>'+b.country+'</dd>'+(b.concierge?'<dt>Guest app</dt><dd>'+(b.concierge.visitor?'Visitor, not staying · the concierge arranges payment':'Room '+b.concierge.room+' · charged to the room bill')+'</dd><dt>Asked from</dt><dd>'+esc(b.concierge.hotel||'')+'</dd>':'')+(b.special?'<dt>Requests</dt><dd>'+esc(b.special)+'</dd>':'')+supLine+'</dl>'+(live?'<div style="margin-top:8px"><button class="btn sm" data-a="edit">Edit guest details</button></div>':'')+
+  '<div class="sec" style="display:flex;justify-content:space-between;align-items:center"><span>'+PRODUCTS[b.product].label+' details</span>'+ops+'</div>'+prodCard(b)+'<dl class="dl">'+items.map(x=>'<dt>'+x[0]+'</dt><dd>'+esc(x[1])+'</dd>').join('')+'</dl>'+
+  '<div class="sec">Price</div><table style="font-size:13px"><tbody>'+b.lines.map(l=>'<tr style="cursor:default"><td>'+esc(l.desc)+'</td><td class="num">'+(l.type==='DISCOUNT'?'−':'')+fmt(l.amount)+'</td></tr>').join('')+(b.service?'<tr style="cursor:default"><td class="muted">Service charge '+b.svcPct+'%</td><td class="num">'+fmt(b.service)+'</td></tr>':'')+'<tr style="cursor:default"><td class="muted">Tax '+(b.taxPct==null?11:b.taxPct)+'%</td><td class="num">'+fmt(b.tax)+'</td></tr><tr style="cursor:default"><td><b>Total</b></td><td class="num"><b>'+fmt(b.total)+'</b></td></tr><tr style="cursor:default"><td class="muted">Paid</td><td class="num">'+fmt(b.paid)+'</td></tr><tr style="cursor:default"><td><b>Balance</b></td><td class="num"><b>'+fmt(bal(b))+'</b></td></tr>'+(isOp()?'<tr style="cursor:default"><td class="muted">Platform commission '+b.pct+'%</td><td class="num muted">'+fmt(b.commission)+'</td></tr>':'')+'</tbody></table>'+
+  '<div class="sec" style="display:flex;justify-content:space-between;align-items:center"><span>Payments</span>'+(['CANCELLED','EXPIRED'].includes(b.status)?'':'<button class="btn sm" data-a="pay">+ Record payment</button>')+'</div>'+
+  (b.payments.length?b.payments.map(p=>'<div class="rel"><span>'+(p.kind==='REFUND'?'<span class="pill info">Refund</span> ':'')+fmt(p.amount)+' <span class="muted">· '+p.method.replace('_',' ').toLowerCase()+' · '+fdt(p.at)+(p.tx!=='SUCCEEDED'?' · '+p.tx.toLowerCase():'')+'</span></span><span class="acts">'+(!isStaff()&&p.kind==='PAYMENT'&&p.tx==='SUCCEEDED'&&refundLeft(b,p)>0?'<button class="btn sm" data-refund="'+p.id+'">Refund</button>':'')+(!isStaff()&&p.tx==='SUCCEEDED'?'<button class="btn sm ghost" data-void="'+p.id+'">Void</button>':'')+'</span></div>').join(''):'<p class="muted" style="margin:0">No payments yet.</p>')+
+  (isStaff()?'<p class="muted" style="font-size:12px;margin:6px 0 0">Staff can record payments. Refunds and voids are for admins.</p>':'')+
+  '<div class="sec">Guests</div>'+b.guests.map(g=>'<div class="rel"><span>'+esc(g.name)+' <span class="muted">· '+g.type.toLowerCase()+'</span></span>'+(g.lead?'<span class="pill info">Lead</span>':'')+'</div>').join('')+
+  '<div class="sec" style="display:flex;justify-content:space-between;align-items:center"><span>Timeline</span><button class="btn sm" data-a="note">+ Add note</button></div>'+b.events.slice().sort((a,c)=>c.t-a.t).map(e=>'<div class="act-row"><span class="tag">'+e.type.replace('_',' ').toLowerCase()+'</span><span style="flex:1;min-width:0">'+esc(e.msg)+'</span><span class="muted" style="font-size:12px">'+fdt(e.t)+' · '+esc(e.by)+'</span></div>').join('')+'</div>';
+}
+/* ---------- dialogs: actions ---------- */
+function actDetail(a){
+  const b=find(S.detail);if(!b&&a!=='close')return;
+  if(a==='close')return closeDetail();
+  if(a==='confirm'){if(b.hold&&b.hold<Date.now()&&b.paid<=0)return toast('The hold on this booking has expired.',1);b.hold=null;setStatus(b,'CONFIRMED','Confirmed');toast('Booking confirmed');}
+  if(a==='complete'){if(b.start>Date.now())return toast('The service has not started yet',1);setStatus(b,'COMPLETED','Completed');toast('Marked completed')}
+  if(a==='noshow'){if(b.start>Date.now())return toast('The service has not started yet',1);setStatus(b,'NO_SHOW','Guest did not show up');toast('Marked no-show')}
+  if(a==='delete'){b.deleted=true;S.f.del=false;b.events.push({t:Date.now(),type:'EDITED',msg:'Deleted (soft)',by:who()});toast('Booking deleted. It can be restored.');closeDetail();render();return}
+  if(a==='restore'){b.deleted=false;toast('Booking restored')}
+  if(a==='cancel')return cancelDlg(b);
+  if(a==='pay')return payDlg(b);
+  if(a==='note')return noteDlg(b);
+  if(a==='edit')return editDlg(b);
+  render();refreshDetail();
+}
+function cancelDlg(b){
+  const err=canCancel(b);const pct=refundPct(b),refundable=Math.round(b.paid*pct/100),h=Math.round((b.start-Date.now())/36e5);
+  dlg('Cancel '+b.no,(err?'<div class="note w">'+esc(err)+'</div>':'<div class="note">'+(b.paid>0?'The "'+b.cancelPolicy.name+'" policy refunds <b>'+pct+'%</b> now ('+(h>0?h+' hours before start':'after start')+'). Paid '+fmt(b.paid)+', refundable <b>'+fmt(refundable)+'</b>.'+(isStaff()?'':' You can change the amount.'):'Nothing has been paid, so there is nothing to refund.')+'</div>')+
+  fld('Reason <b>*</b>','<input type="text" id="cr" placeholder="Why is it cancelled?" required>')+(b.paid>0&&!isStaff()&&!err?fld('Refund amount','<input type="number" id="ca" min="0" max="'+b.paid+'" value="'+refundable+'">','At most '+fmt(b.paid)+' (what was paid).'):''),
+  '<button class="btn" data-x="dlg">Keep booking</button><button class="btn bad" data-x="docancel"'+(err?' disabled':'')+'>Cancel booking</button>');
+}
+function payDlg(b){dlg('Record a payment','<div class="note">Balance due: <b>'+fmt(bal(b))+'</b></div>'+fld('Amount <b>*</b>','<input type="number" id="pa" min="1" value="'+Math.round(bal(b))+'">')+fld('Method','<select id="pm">'+['CASH','BANK_TRANSFER','CARD','QRIS','E_WALLET','ROOM_CHARGE'].filter(m=>m!=='ROOM_CHARGE'||(b.concierge&&!b.concierge.visitor)).map(m=>'<option value="'+m+'">'+m.replace('_',' ').toLowerCase()+'</option>').join('')+'</select>')+fld('Reference','<input type="text" id="pr" placeholder="Optional">'),'<button class="btn" data-x="dlg">Cancel</button><button class="btn pri" data-x="dopay">Save payment</button>')}
+function noteDlg(b){dlg('Add a note','<textarea id="nt" placeholder="Visible to your team in the timeline"></textarea>','<button class="btn" data-x="dlg">Cancel</button><button class="btn pri" data-x="donote">Add note</button>')}
+function editDlg(b){dlg('Edit guest details',fld('Name','<input type="text" id="en" value="'+esc(b.guest)+'">')+fld('Email','<input type="email" id="ee" value="'+esc(b.email)+'">')+fld('Phone','<input type="text" id="ep" value="'+esc(b.phone)+'">')+fld('Special requests','<textarea id="er">'+esc(b.special)+'</textarea>'),'<button class="btn" data-x="dlg">Cancel</button><button class="btn pri" data-x="doedit">Save</button>')}
+function refundDlg(b,p){const left=refundLeft(b,p);dlg('Refund a payment','<div class="note">Payment of '+fmt(p.amount)+'. At most <b>'+fmt(left)+'</b> can still be refunded.</div>'+fld('Amount','<input type="number" id="ra" min="1" max="'+left+'" value="'+left+'">'),'<button class="btn" data-x="dlg">Cancel</button><button class="btn pri" data-x="dorefund" data-p="'+p.id+'">Issue refund</button>')}
+/* ---------- operations dialogs ---------- */
+function ciDlg(b){dlg('Check in '+b.guest,fld('Room number <b>*</b>','<input type="text" id="rn" placeholder="e.g. 204" required>','Assign the room the guest receives.')+(bal(b)>0?'<div class="note w">Balance due at the desk: '+fmt(bal(b))+'</div>':''),'<button class="btn" data-x="dlg">Cancel</button><button class="btn pri" data-x="doci" data-b="'+b.id+'">Check in</button>')}
+function tciDlg(b){dlg('Who arrived?',fld('Guests who showed up','<input type="number" id="sh" min="0" max="'+b.pax+'" value="'+b.pax+'">','Booked: '+b.pax),'<button class="btn" data-x="dlg">Cancel</button><button class="btn pri" data-x="dotci" data-b="'+b.id+'">Save</button>')}
+function kciDlg(b){const left=b.item.guests-b.item.inCount;dlg('Door check-in',fld('Guests through the door now','<input type="number" id="kc" min="1" max="'+left+'" value="'+left+'">',left+' still to check in')+(b.item.isTable?fld('Table','<input type="text" id="kt" placeholder="e.g. S4" value="'+esc(b.item.label||'')+'">'):''),'<button class="btn" data-x="dlg">Cancel</button><button class="btn pri" data-x="dokci" data-b="'+b.id+'">Check in</button>')}
+function asgDlg(b){
+  const busy=(k,id)=>S.B.some(o=>o!==b&&o.product==='TRANSPORT'&&!o.deleted&&['PENDING','CONFIRMED'].includes(o.status)&&o.item[k]===id&&Math.abs(o.start-b.start)<3*36e5);
+  const ds=live('drivers',b.supplier.id),vs=live('vehicles',b.supplier.id);
+  dlg('Assign driver',  '<div class="note">'+esc(b.title)+' · '+fdt(b.start)+' · needs a <b>'+b.item.veh+'</b></div>'+fld('Driver','<select id="ad">'+ds.map(d=>'<option value="'+d.id+'"'+(b.item.driver===d.id?' selected':'')+(busy('driver',d.id)?' disabled':'')+'>'+d.name+(busy('driver',d.id)?' (busy within 3 h)':'')+'</option>').join('')+'</select>')+fld('Vehicle','<select id="av">'+vs.map(v=>'<option value="'+v.id+'"'+(b.item.vehicle===v.id?' selected':'')+(busy('vehicle',v.id)?' disabled':'')+'>'+v.plate+' · '+v.type+(busy('vehicle',v.id)?' (busy within 3 h)':'')+'</option>').join('')+'</select>','Drivers and vehicles already on another job within 3 hours are greyed out.'),'<button class="btn" data-x="dlg">Cancel</button><button class="btn pri" data-x="doasg" data-b="'+b.id+'">Save assignment</button>');
+}
+/* ---------- new booking ---------- */
+let NB={};
+function newBooking(){
+  const P=APP.product==='ALL'?(NB.p||'HOTEL'):APP.product;NB.p=P;
+  const SID=APP.product==='ALL'?(NB.sup||'s1'):'s1';NB.sup=SID;const sup=isOp()?fld('Supplier <b>*</b>','<select id="nsup">'+SUPPLIERS.map(s=>'<option value="'+s.id+'"'+(SID===s.id?' selected':'')+'>'+s.name+'</option>').join('')+'</select>','The operator must choose which supplier the booking belongs to.'):'';const LV=k=>live(k,SID);
+  const pp=APP.product==='ALL'?fld('Product','<select id="nprod">'+Object.keys(PRODUCTS).map(k=>'<option value="'+k+'"'+(P===k?' selected':'')+'>'+PRODUCTS[k].label+'</option>').join('')+'</select>'):'';
+  let f='';
+  if(P==='HOTEL')f='<div class="grid2">'+fld('Check-in <b>*</b>','<input type="date" id="n1" min="'+dayN(0)+'" value="'+dayN(3)+'">')+fld('Check-out <b>*</b>','<input type="date" id="n2" min="'+dayN(1)+'" value="'+dayN(5)+'">')+'</div>'+fld('Room type','<select id="n3">'+LV('rooms').map(r=>'<option value="'+r.id+'">'+esc(r.name)+' · '+fmt(r.price)+'</option>').join('')+'</select>')+fld('Rate plan','<select id="n4">'+LV('plans').map(r=>'<option value="'+r.id+'">'+esc(r.name)+(r.add?' (+'+fmt(r.add)+'/night)':'')+'</option>').join('')+'</select>')+'<div class="grid2">'+fld('Rooms','<input type="number" id="n5" min="1" max="5" value="1">')+fld('Adults','<input type="number" id="n6" min="1" max="6" value="2">')+'</div>';
+  if(P==='TRIP')f=fld('Trip','<select id="n3">'+LV('trips').map(r=>'<option value="'+r.id+'">'+esc(r.name)+'</option>').join('')+'</select>')+fld('Variant','<select id="n4">'+LV('variants').map(v=>'<option value="'+v.id+'">'+esc(NAMEOF('trips',v.tripId))+' · '+esc(v.name)+' · '+fmt(v.adult)+'</option>').join('')+'</select>')+fld('Departure date <b>*</b>','<input type="date" id="n1" min="'+dayN(0)+'" value="'+dayN(2)+'">')+'<div class="grid2">'+fld('Adults','<input type="number" id="n5" min="1" max="30" value="2">')+fld('Children','<input type="number" id="n6" min="0" max="30" value="0">')+'</div>'+fld('Pick-up address','<input type="text" id="n7" placeholder="Hotel or meeting point">')+'<div class="chips" style="margin-bottom:12px"><label><input type="checkbox" id="n8"> Photo package (+Rp 150.000)</label></div>';
+  if(P==='TRANSPORT')f=fld('Service','<select id="n3">'+LV('services').map(r=>'<option value="'+r.id+'">'+esc(r.name)+' · '+r.veh+' · '+fmt(r.price)+'</option>').join('')+'</select>')+'<div class="grid2">'+fld('Pick-up date <b>*</b>','<input type="date" id="n1" min="'+dayN(0)+'" value="'+dayN(1)+'">')+fld('Time','<input type="time" id="n2" value="10:00">')+'</div>'+fld('Pick-up address <b>*</b>','<input type="text" id="n7" value="Ngurah Rai Airport (DPS)">')+fld('Drop-off address <b>*</b>','<input type="text" id="n9" placeholder="Hotel or villa">')+'<div class="grid2">'+fld('Passengers','<input type="number" id="n5" min="1" max="12" value="2">')+fld('Flight number','<input type="text" id="n10" placeholder="Optional">')+'</div><div class="chips" style="margin-bottom:12px"><label><input type="checkbox" id="n8"> Add a return transfer</label></div>';
+  if(P==='CLUB')f=fld('Event','<select id="n3">'+LV('cevents').map(e=>'<option value="'+e.id+'">'+esc(e.name)+' · '+dayN(e.off)+'</option>').join('')+'</select>')+fld('Entry','<select id="n4">'+LV('tickets').map(r=>'<option value="'+r.id+'">'+esc(r.name)+' · '+fmt(r.price)+'</option>').join('')+LV('tables').map(r=>'<option value="'+r.id+'">Table: '+esc(r.name)+' · '+fmt(r.price)+'</option>').join('')+'</select>','Choose a ticket or a table, never both.')+'<div class="grid2">'+fld('Quantity','<input type="number" id="n5" min="1" max="10" value="2">')+fld('Guests','<input type="number" id="n6" min="1" max="20" value="2">')+'</div>';
+  ov('ov-new','<div class="sheet" role="dialog" aria-modal="true" aria-label="New booking"><div class="sh"><div><h1 style="font-size:18px">New booking</h1><div class="muted">Price and stock come from your master data.</div></div><button class="btn ghost" data-x="newclose" aria-label="Close">✕</button></div><form id="nf" novalidate><div class="sb">'+sup+pp+f+
+  '<div class="sec">Guest</div>'+fld('Full name <b>*</b>','<input type="text" id="gn" autocomplete="off">')+'<div class="grid2">'+fld('Email','<input type="email" id="ge">')+fld('Phone','<input type="text" id="gp">')+'</div>'+fld('Source','<select id="gs">'+SRC.map(s=>'<option value="'+s+'"'+(s===S.set.source?' selected':'')+'>'+s.replace('_',' ').toLowerCase()+'</option>').join('')+'</select>')+
+  (isStaff()?'':fld('Discount (Rp)','<input type="number" id="gd" min="0" value="0">','Admins only. Staff cannot give discounts.'))+'<div class="chips" style="margin-bottom:12px"><label><input type="checkbox" id="gc"> Confirm now (for a paid walk-in). Otherwise it holds stock for '+S.set.hold+' minutes.</label></div>'+
+  '<div class="sec">Price</div><div id="quote"></div></div><div class="sf"><button type="button" class="btn" data-x="newclose">Cancel</button><button type="submit" class="btn pri">Create booking</button></div></form></div>');
+  quote();
+}
+function calc(){
+  const P=NB.p,g=id=>{const e=$('#'+id);return e?e.value:''},n=id=>Number(g(id))||0;let lines=[],start=0,svc=0,avail=null,err='';const SID=NB.sup||'s1',taxes=live('taxes',SID).filter(t=>t.applies==='ALL'||t.applies===P);const taxPct=taxes.filter(t=>t.kind==='TAX').reduce((a,t)=>a+t.pct,0),svcPct=taxes.filter(t=>t.kind==='SERVICE').reduce((a,t)=>a+t.pct,0);
+  if(P==='HOTEL'){const r=CAT.HOTEL.rooms.find(x=>x.id===g('n3')),pl=CAT.HOTEL.plans.find(x=>x.id===g('n4')),ci=g('n1'),co=g('n2'),nights=Math.round((new Date(co)-new Date(ci))/DAY),rooms=n('n5');
+    if(!r||!pl)return{lines:[],sub:0,disc:0,t:{service:0,tax:0,total:0},err:'Add an active room type and rate plan in master data first',avail:null,svc:0,taxPct:0};if(!(nights>0))err='Check-out must be after check-in';else if(pl.minStay&&nights<pl.minStay)err='This rate plan needs at least '+pl.minStay+' night(s)';else{let min=99;for(let i=0;i<nights;i++)min=Math.min(min,stockLeft('room',r.id,iso(new Date(ci).getTime()+i*DAY+12*36e5)));avail=min;if(min<rooms)err='Only '+Math.max(0,min)+' room(s) left for these nights';
+      if(n('n6')>r.max*rooms)err='Over capacity: '+r.name+' sleeps '+r.max+' per room';lines.push({desc:r.name+' × '+nights+' night(s) × '+rooms+' room(s)',amount:r.price*nights*rooms});if(pl.add)lines.push({desc:pl.name,amount:pl.add*nights*rooms})}}
+  if(P==='TRIP'){const t=CAT.TRIP.trips.find(x=>x.id===g('n3')),vr=CAT.TRIP.variants.find(x=>x.id===g('n4')),a=n('n5'),c=n('n6'),d=g('n1');if(!t||!vr)return{lines:[],sub:0,disc:0,t:{service:0,tax:0,total:0},err:'Add an active trip and variant in master data first',avail:null,svc:0,taxPct:0};if(vr.tripId!==t.id)err='This variant belongs to another trip';const l=stockLeft('trip',t.id,d);avail=l;if(l<a+c)err='Only '+Math.max(0,l)+' seat(s) left on this departure';lines.push({desc:vr.name+' · adults × '+a,amount:vr.adult*a});if(c)lines.push({desc:vr.name+' · children × '+c,amount:vr.child*c});if($('#n8')&&$('#n8').checked)lines.push({desc:'Photo package',amount:150000})}
+  if(P==='TRANSPORT'){const s=CAT.TRANSPORT.services.find(x=>x.id===g('n3'));if(!s)return{lines:[],sub:0,disc:0,t:{service:0,tax:0,total:0},err:'Add an active service in master data first',avail:null,svc:0,taxPct:0};if(n('n5')>s.max)err=s.veh+' takes at most '+s.max+' passengers';lines.push({desc:s.name,amount:s.price});if($('#n8')&&$('#n8').checked)lines.push({desc:'Return transfer',amount:s.price})}
+  if(P==='CLUB'){const ev=CAT.CLUB.events.find(x=>x.id===g('n3')),it=[...CAT.CLUB.tickets,...CAT.CLUB.tables].find(x=>x.id===g('n4')),q=n('n5');if(!ev||!it)return{lines:[],sub:0,disc:0,t:{service:0,tax:0,total:0},err:'Add an active event and ticket in master data first',avail:null,svc:0,taxPct:0};const l=stockLeft('club',it.id,dayN(ev.off));avail=l;if(l<q)err='Only '+Math.max(0,l)+' left for this night';if(it.cap&&n('n6')>it.cap*q)err='This table seats '+it.cap;lines.push({desc:it.name+' × '+q,amount:it.price*q})}
+  const sub=lines.reduce((a,l)=>a+l.amount,0),disc=Math.min(sub,Number($('#gd')?$('#gd').value:0)||0);svc=svcPct;const t=totals(sub,disc,svc,taxPct);return{lines,sub,disc,t,err,avail,svc,taxPct};
+}
+function quote(){const q=calc(),el=$('#quote');if(!el)return;NB.q=q;el.innerHTML=(q.err?'<div class="note w">'+esc(q.err)+'</div>':q.avail!=null?'<div class="note">Available: '+q.avail+' left.</div>':'')+'<table style="font-size:13px"><tbody>'+q.lines.map(l=>'<tr style="cursor:default"><td>'+esc(l.desc)+'</td><td class="num">'+fmt(l.amount)+'</td></tr>').join('')+(q.disc?'<tr style="cursor:default"><td>Discount</td><td class="num">−'+fmt(q.disc)+'</td></tr>':'')+(q.t.service?'<tr style="cursor:default"><td class="muted">Service charge '+q.svc+'%</td><td class="num">'+fmt(q.t.service)+'</td></tr>':'')+'<tr style="cursor:default"><td class="muted">Tax '+q.taxPct+'%</td><td class="num">'+fmt(q.t.tax)+'</td></tr><tr style="cursor:default"><td><b>Total</b></td><td class="num"><b>'+fmt(q.t.total)+'</b></td></tr></tbody></table>'}
+function submitNew(e){
+  e.preventDefault();const q=calc();const gn=$('#gn').value.trim();let ok=true;
+  document.querySelectorAll('#nf .fld.bad').forEach(x=>{x.classList.remove('bad');const m=x.querySelector('.err');if(m)m.remove()});
+  const bad=(id,m)=>{ok=false;const f=$('#'+id).closest('.fld');f.classList.add('bad');f.insertAdjacentHTML('beforeend','<span class="err">'+m+'</span>')};
+  if(!gn)bad('gn','This field is required');if(S.set.reqEmail&&!$('#ge').value.trim())bad('ge','Your settings require a guest email');if(NB.p==='TRANSPORT'){if(!$('#n7').value.trim())bad('n7','This field is required');if(!$('#n9').value.trim())bad('n9','This field is required')}
+  if(!ok)return;if(q.err)return toast(q.err,1);
+  const P=NB.p,sup=isOp()?SUPPLIERS.find(s=>s.id===$('#nsup').value):SUPPLIERS[0],g=id=>$('#'+id).value;
+  const b={id:'b'+(APP.n++),product:P,status:$('#gc').checked?'CONFIRMED':'PENDING',source:g('gs'),guest:gn,email:g('ge')||(gn.toLowerCase().replace(/[^a-z]+/g,'.')+'@example.test'),phone:g('gp')||'—',country:'ID',supplier:sup,created:Date.now(),lines:q.lines.map(l=>({type:'BASE',desc:l.desc,amount:l.amount})),payments:[],events:[],notes:[],guests:[{name:gn,type:'ADULT',lead:true}],special:'',hold:null,deleted:false,item:{},cancelPolicy:{name:'Flexible (72 h)',rules:[[72,100],[24,50],[0,0]]}};
+  if(q.disc)b.lines.push({type:'DISCOUNT',desc:'Discount',amount:q.disc});b.subtotal=q.sub;b.discount=q.disc;b.service=q.t.service;b.tax=q.t.tax;b.total=q.t.total;b.svcPct=q.svc;b.taxPct=q.taxPct;b.pct=sup.pct;b.commission=Math.round(b.total*sup.pct/100);b.no=bookingNo(P,sup.id,b.created);
+  if(P==='HOTEL'){const r=CAT.HOTEL.rooms.find(x=>x.id===g('n3')),pl=CAT.HOTEL.plans.find(x=>x.id===g('n4')),n=Math.round((new Date(g('n2'))-new Date(g('n1')))/DAY);b.item={hotel:CAT.HOTEL.hotel.ubud,room:r.name,roomId:r.id,plan:pl.name,checkIn:g('n1'),checkOut:g('n2'),nights:n,rooms:+g('n5'),adults:+g('n6'),children:0,roomNo:null,inAt:null,outAt:null};b.start=new Date(g('n1')+'T14:00').getTime();b.end=new Date(g('n2')+'T12:00').getTime();b.title=b.item.hotel+' · '+r.name;b.detail=g('n1')+' → '+g('n2')+' · '+n+' night'+(n>1?'s':'')+' · '+g('n5')+' room'+(g('n5')>1?'s':'');b.pax=+g('n6')}
+  if(P==='TRIP'){const t=CAT.TRIP.trips.find(x=>x.id===g('n3')),vr=CAT.TRIP.variants.find(x=>x.id===g('n4'));b.item={trip:t.name,tripId:t.id,variant:vr.name,date:g('n1'),time:t.time,adults:+g('n5'),children:+g('n6'),pickup:g('n7')||'Meeting point',shown:null,inAt:null};b.start=new Date(g('n1')+'T'+t.time).getTime();b.end=b.start+9*36e5;b.title=t.name;b.detail=g('n1')+' '+t.time+' · '+g('n5')+' adults';b.pax=+g('n5')+ +g('n6')}
+  if(P==='TRANSPORT'){const s=CAT.TRANSPORT.services.find(x=>x.id===g('n3'));b.start=new Date(g('n1')+'T'+g('n2')).getTime();b.end=b.start+2*36e5;b.item={service:s.name,veh:s.veh,pickupAt:b.start,pickup:g('n7'),dropoff:g('n9'),flight:g('n10'),pax:+g('n5'),luggage:0,driver:null,vehicle:null,assign:'UNASSIGNED'};b.title=g('n7')+' → '+g('n9');b.detail=s.veh+' · '+g('n5')+' pax';b.pax=+g('n5')}
+  if(P==='CLUB'){const ev=CAT.CLUB.events.find(x=>x.id===g('n3')),it=[...CAT.CLUB.tickets,...CAT.CLUB.tables].find(x=>x.id===g('n4'));b.item={club:CAT.CLUB.clubs[0],event:ev.name,product:it.name,isTable:!!it.cap,visit:dayN(ev.off),guests:+g('n6'),qty:+g('n5'),label:null,inCount:0,arrival:'22:00'};b.start=at(ev.off,'21:00');b.end=at(ev.off+1,'03:00');b.title=b.item.club+' · '+ev.name;b.detail=b.item.visit+' · '+it.name+' × '+g('n5');b.pax=+g('n6')}
+  b.events.push({t:Date.now(),type:'CREATED',msg:'Booking '+b.no+' created ('+b.source+')',by:who()});
+  if(S.set.mailGuest)b.events.push({t:Date.now()+1,type:'NOTIFICATION',msg:b.email?'Email sent to the guest ('+b.email+')':'Guest email skipped: no email address',by:'system'});
+  if(S.set.mailSup)b.events.push({t:Date.now()+2,type:'NOTIFICATION',msg:'Email sent to the supplier ('+(S.biz.email||sup.name)+')',by:'system'});
+  if(b.status==='CONFIRMED')b.events.push({t:Date.now(),type:'STATUS_CHANGED',msg:'Confirmed at creation',by:who()});else b.hold=Date.now()+S.set.hold*6e4;
+  b.cid=(S.C.find(c=>c.email===b.email&&c.supplier===sup)||(S.C.push({id:'c'+S.C.length,name:b.guest,email:b.email,phone:b.phone,country:'ID',supplier:sup,notes:''}),S.C[S.C.length-1])).id;
+  {const cp=live('policies',sup.id)[0];if(cp)b.cancelPolicy={name:cp.name,rules:cp.rules.split(',').map(x=>x.split(':').map(Number))};b.cancelPolicy=b.cancelPolicy||{name:'Flexible (72 h)',rules:[[72,100],[24,50],[0,0]]}}auditLog('CREATE','Booking',b.no);payStatus(b);S.B.push(b);closeOv('ov-new');S.page='bookings';S.f={q:b.no,st:new Set(),pay:'',src:'',sup:'',prod:'',from:'',to:''};S.sort={k:'created',d:-1};render();openDetail(b.id);toast('Booking '+b.no+' created'+(b.hold?' and holding stock for '+S.set.hold+' minutes':''));
+}
+/* ---------- export ---------- */
+function exportCsv(){
+  const r=filtered(),safe=v=>{const s=String(v??'');return /^[=+\-@\t\r]/.test(s)&&!/^-?\d+(\.\d+)?$/.test(s)?"'"+s:s},q=v=>'"'+safe(v).replace(/"/g,'""')+'"';
+  const csv=['Booking no,Product,Status,Payment,Guest,What,Start,Total,Paid,Balance'].concat(r.map(b=>[b.no,b.product,b.status,b.pay,b.guest,b.title,new Date(b.start).toISOString(),b.total,b.paid,bal(b)].map(q).join(','))).join('\n');
+  dlg('Export '+r.length+' bookings','<p class="muted" style="margin-top:0">The real app downloads this as a CSV file (max 5,000 rows). Cells that start with = + - @ are prefixed so spreadsheets never run them as formulas. Here it is as text:</p><pre style="max-height:260px">'+esc(csv.split('\n').slice(0,12).join('\n'))+(r.length>11?'\n…':'')+'</pre>','<button class="btn" data-x="dlg">Close</button><button class="btn pri" data-x="copycsv">Copy CSV</button>');window._csv=csv;
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-go],[data-open],[data-act],[data-a],[data-x],[data-sort],[data-pg],[data-st],[data-statusgo],[data-cal],[data-cust],[data-supf],[data-fd],[data-dd],[data-dr],[data-dep],[data-ci],[data-co],[data-tci],[data-kci],[data-asg],[data-stp],[data-refund],[data-void],[data-mdnew],[data-mdedit],[data-mdtoggle],[data-mddel],[data-mdrestore],[data-mdx],[data-sv],[data-lshow],[data-lforgot],[data-lfill],[data-ureset],[data-utoggle],[data-uinvite],[data-supnew],[data-supedit],[data-suptoggle],[data-invfill]');if(!t)return;const D=t.dataset;
+  if(D.act==='logout'){logout();return}
+  if(D.go){S.page=D.go;S.pg=1;location.hash=D.go;render();return}
+  if(D.statusgo){S.f.st=new Set([D.statusgo]);S.page='bookings';S.pg=1;location.hash='bookings';render();return}
+  if(D.open){openDetail(D.open);return}
+  if(D.act==='opennav'){document.body.classList.add('nav-open');return}if(D.act==='closenav'){document.body.classList.remove('nav-open');return}
+  if(D.act==='new'){NB={};newBooking();return}if(D.act==='export'){exportCsv();return}
+  if(D.act==='clear'){S.f={q:'',st:new Set(),pay:'',src:'',sup:'',prod:'',from:'',to:''};S.pg=1;render();return}
+  if(D.a){actDetail(D.a);return}
+  if(D.sort){S.sort.d=S.sort.k===D.sort?-S.sort.d:1;S.sort.k=D.sort;render();return}
+  if(D.pg){S.pg+=Number(D.pg);render();return}
+  if(D.cal!==undefined){const d=new Date(S.calMonth);S.calMonth=D.cal==='0'?new Date(T0).setDate(1):new Date(d.getFullYear(),d.getMonth()+Number(D.cal),1).getTime();render();return}
+  if(D.fd!==undefined){S.fdDate=D.fd==='0'?0:S.fdDate+Number(D.fd);render();return}
+  if(D.dd!==undefined){S.dispDay=D.dd==='0'?0:S.dispDay+Number(D.dd);render();return}
+  if(D.dr!==undefined){S.doorDay=D.dr==='0'?0:(S.doorDay||0)+Number(D.dr);render();return}
+  if(D.dep){S.depOpen=S.depOpen===D.dep?null:D.dep;render();return}
+  if(D.supf){S.f={q:'',st:new Set(),pay:'',src:'',sup:D.supf,prod:'',from:'',to:''};S.page='bookings';location.hash='bookings';render();return}
+  if(D.cust){const c=S.C.find(x=>x.id===D.cust),bs=S.B.filter(b=>b.cid===c.id&&!b.deleted);dlg(c.name,'<dl class="dl"><dt>Email</dt><dd>'+esc(c.email)+'</dd><dt>Phone</dt><dd>'+esc(c.phone)+'</dd><dt>Country</dt><dd>'+c.country+'</dd><dt>Lifetime spend</dt><dd>'+fmt(bs.filter(b=>['CONFIRMED','COMPLETED'].includes(b.status)).reduce((a,b)=>a+b.total,0))+'</dd></dl><div class="sec">Bookings ('+bs.length+')</div>'+bs.map(b=>'<button class="rel" style="width:100%;background:none;cursor:pointer;text-align:left" data-open="'+b.id+'" data-x="dlg"><span><span class="mono">'+b.no+'</span> <span class="muted">'+fdate(b.start)+'</span></span>'+pill(ST,b.status)+'</button>').join(''),'<button class="btn" data-x="dlg">Close</button>');return}
+  if(D.ci){ciDlg(find(D.ci));return}if(D.co){const b=find(D.co);b.item.outAt=Date.now();b.events.push({t:Date.now(),type:'CHECK_OUT',msg:'Checked out',by:who()});if(b.start<Date.now())setStatus(b,'COMPLETED','Completed at check-out');toast('Checked out');render();return}
+  if(D.tci){tciDlg(find(D.tci));return}if(D.kci){kciDlg(find(D.kci));return}if(D.asg){asgDlg(find(D.asg));return}
+  if(D.stp){const[id,to]=D.stp.split('|'),b=find(id);b.item.assign=to;b.events.push({t:Date.now(),type:'ASSIGNMENT',msg:'Trip status: '+to.replace('_',' ').toLowerCase(),by:who()});if(to==='DROPPED_OFF'){setStatus(b,'COMPLETED','All legs dropped off')}toast('Updated');render();return}
+  if(D.refund){const b=find(S.detail),p=b.payments.find(x=>x.id===D.refund);refundDlg(b,p);return}
+  if(D.void){const b=find(S.detail),p=b.payments.find(x=>x.id===D.void);if(p.kind==='PAYMENT'&&b.payments.some(r=>r.kind==='REFUND'&&r.of===p.id&&r.tx==='SUCCEEDED'))return toast('Void the refunds on this payment first',1);p.tx='VOIDED';b.events.push({t:Date.now(),type:'PAYMENT',msg:(p.kind==='REFUND'?'Refund':'Payment')+' of '+fmt(p.amount)+' voided',by:who()});payStatus(b);toast('Voided');render();refreshDetail();return}
+  if(D.mdnew){ov('ov-md',mdForm(D.mdnew,null));return}
+  if(D.mdedit){const[k,id]=D.mdedit.split('|');ov('ov-md',mdForm(k,resArr(k).find(x=>x.id===id)));return}
+  if(D.mdtoggle){const[k,id]=D.mdtoggle.split('|'),r=resArr(k).find(x=>x.id===id);r.status=r.status==='INACTIVE'?'ACTIVE':'INACTIVE';auditLog(r.status==='ACTIVE'?'ACTIVATE':'DEACTIVATE',RES[k].one,r.name||r.code||r.plate);toast(r.status==='ACTIVE'?'Activated':'Deactivated. It can no longer be booked.');render();return}
+  if(D.mddel){const[k,id]=D.mddel.split('|');mdDelete(k,id);return}
+  if(D.mdrestore){const[k,id]=D.mdrestore.split('|'),r=resArr(k).find(x=>x.id===id);r.deleted=false;auditLog('RESTORE',RES[k].one,r.name||r.code||r.plate);toast('Restored');render();return}
+  if(D.mdx){const k=D.mdx,R=RES[k],rows=resArr(k).filter(r=>!r.deleted),sf=v=>{const s=String(v??'');return /^[=+\-@\t\r]/.test(s)&&!/^-?\d+(\.\d+)?$/.test(s)?"'"+s:s},csv=[['id'].concat(R.f.map(f=>f.k)).join(',')].concat(rows.map(r=>['"'+r.id+'"'].concat(R.f.map(f=>'"'+sf(r[f.k]).replace(/"/g,'""')+'"')).join(','))).join('\n');window._csv=csv;dlg('Export '+R.l,'<p class="muted" style="margin-top:0">The real app downloads a CSV or XLSX and can import one back (all or nothing, with a dry run).</p><pre style="max-height:240px">'+esc(csv.split('\n').slice(0,10).join('\n'))+'</pre>','<button class="btn" data-x="dlg">Close</button><button class="btn pri" data-x="copycsv">Copy CSV</button>');return}
+  if(D.sv){saveSettings(D.sv);return}
+  if(D.lshow!==undefined){const p=$('#lp');p.type=p.type==='password'?'text':'password';t.textContent=p.type==='password'?'Show':'Hide';return}
+  if(D.lforgot!==undefined){dlg('Reset your password','<p style="margin-top:0">Enter your email. If it belongs to an account, we send a reset link that works for 30 minutes.</p>'+fld('Email','<input type="email" id="fe">'),'<button class="btn" data-x="dlg">Cancel</button><button class="btn pri" data-x="doforgot">Send link</button>');return}
+  if(D.lfill){LOGIN.email=D.lfill;LOGIN.err='';render();$('#lp').value=PW;$('#lp').focus();return}
+  if(D.uinvite!==undefined){inviteDlg();return}
+  if(D.ureset){const u=S.users.find(x=>x.id===D.ureset);u.pw=genPw();u.must=true;u.fails=0;if(u.status==='LOCKED')u.status='ACTIVE';auditLog('PASSWORD','User',u.email);dlg('Temporary password','<p style="margin-top:0">Give this to '+esc(u.name)+'. It is shown once. They must choose a new one at first sign-in.</p><pre class="mono" style="font-size:15px">'+esc(u.pw)+'</pre>','<button class="btn pri" data-x="dlg">Done</button>');render();return}
+  if(D.utoggle){const u=S.users.find(x=>x.id===D.utoggle);u.status=u.status==='ACTIVE'?'SUSPENDED':'ACTIVE';u.fails=0;auditLog(u.status==='ACTIVE'?'ACTIVATE':'DEACTIVATE','User',u.email);toast(u.status==='ACTIVE'?'Activated':'Suspended and signed out');render();return}
+  if(D.supnew!==undefined){supDlg(null);return}if(D.supedit){supDlg(S.sup.find(x=>x.id===D.supedit));return}
+  if(D.suptoggle){const s=S.sup.find(x=>x.id===D.suptoggle);s.status=s.status==='ACTIVE'?'SUSPENDED':'ACTIVE';auditLog(s.status==='ACTIVE'?'ACTIVATE':'DEACTIVATE','Supplier',s.name);toast(s.status==='ACTIVE'?'Supplier activated':'Supplier suspended. Their users are signed out.');render();return}
+  if(D.invfill!==undefined){const r=CAT.HOTEL.rooms.find(x=>x.id===S.invRoom);Object.keys(S.INV[S.invRoom]).forEach(d=>S.INV[S.invRoom][d].total=r.units);toast('All nights set to '+r.units);render();return}
+
+  if(D.x){X(D.x,D);return}
+  if(D.st){return}
+});
+function X(a,D){
+  if(a==='mdclose'){closeOv('ov-md');return}
+  if(a==='mddodel'){const r=resArr(D.k).find(x=>x.id===D.id);r.deleted=true;auditLog('DELETE',RES[D.k].one,r.name||r.code||r.plate);closeOv('ov-dlg');toast('Deleted. Restore it from the Deleted filter.');render();return}
+  if(a==='doforgot'){closeOv('ov-dlg');toast('If that email has an account, a reset link is on its way.');return}
+  if(a==='dopw'){const m=pwErr($('#np1').value);if(m)return toast('New password: '+m.toLowerCase(),1);if($('#np1').value!==$('#np2').value)return toast('The two passwords do not match',1);if($('#np1').value===S.user.pw)return toast('Choose a different password',1);S.user.pw=$('#np1').value;S.user.must=false;closeOv('ov-dlg');toast('Password saved');return}
+  if(a==='doinvite'){const n=$('#iu-n').value.trim(),em=$('#iu-e').value.trim().toLowerCase();if(!n)return toast('Name is required',1);if(!/^\S+@\S+\.\S+$/.test(em))return toast('Enter a valid email',1);if(S.users.some(u=>u.email===em))return toast('That email is already used',1);const u=mkU(em,n,$('#iu-r').value,isOp()?$('#iu-s').value:S.user.sup);u.pw=genPw();u.must=true;S.users.push(u);auditLog('CREATE','User',em);dlg('User created','<p style="margin-top:0">Give '+esc(n)+' this temporary password. It is shown once.</p><pre class="mono" style="font-size:15px">'+esc(u.pw)+'</pre>','<button class="btn pri" data-x="dlg">Done</button>');render();return}
+  if(a==='dosup'){const n=$('#sp-n').value.trim(),em=$('#sp-e').value.trim(),c=Number($('#sp-c').value);if(!n)return toast('Name is required',1);if(!/^\S+@\S+\.\S+$/.test(em))return toast('Enter a valid email',1);if(!(c>=0&&c<=100))return toast('Commission is 0 to 100',1);if(D.id){const s=S.sup.find(x=>x.id===D.id);Object.assign(s,{name:n,email:em,pct:c});const o=SUPPLIERS.find(x=>x.id===D.id);if(o){o.name=n;o.pct=c}auditLog('UPDATE','Supplier',n);closeOv('ov-dlg');toast('Supplier saved');render();return}const id='s'+(S.sup.length+1),s={id,code:'SUP-000'+(S.sup.length+1),name:n,legal:n,email:em,pct:c,status:'ACTIVE'};S.sup.push(s);SUPPLIERS.push({id,name:n,pct:c});const u=mkU('admin@'+n.split(' ')[0].toLowerCase()+'.example',n+' Admin','ADMIN',id);u.pw=genPw();u.must=true;S.users.push(u);auditLog('CREATE','Supplier',n);dlg('Supplier created','<p style="margin-top:0">Admin sign-in for '+esc(n)+':</p><pre class="mono">'+esc(u.email)+'\n'+esc(u.pw)+'</pre><p class="muted">The password is shown once.</p>','<button class="btn pri" data-x="dlg">Done</button>');render();return}
+
+  const b=find(S.detail),v=id=>($('#'+id)||{}).value;
+  if(a==='dlg'){closeOv('ov-dlg');return}if(a==='newclose'){closeOv('ov-new');return}
+  if(a==='copycsv'){navigator.clipboard&&navigator.clipboard.writeText(window._csv).then(()=>toast('Copied'),()=>toast('Select the text and copy it',1));return}
+  if(a==='docancel'){const why=v('cr').trim();if(why.length<3){toast('Please give a reason (at least 3 characters)',1);return}
+    const pct=refundPct(b);let amt=isStaff()?0:(($('#ca')?Number(v('ca')):Math.round(b.paid*pct/100)));if(amt>b.paid){toast('At most '+fmt(b.paid)+' has been paid',1);return}
+    b.cancelReason=why;b.hold=null;setStatus(b,'CANCELLED','Cancelled: '+why);let left=amt;b.payments.filter(p=>p.kind==='PAYMENT'&&p.tx==='SUCCEEDED').forEach(p=>{const part=Math.min(left,refundLeft(b,p));if(part>0){addRefund(b,p,part);left-=part}});payStatus(b);closeOv('ov-dlg');toast('Cancelled'+(amt?' and '+fmt(amt)+' refunded':''));render();return}
+  if(a==='dopay'){const amt=Number(v('pa'));if(!(amt>0))return toast('Enter an amount',1);if(amt>bal(b)+.5)return toast('The outstanding balance is '+fmt(bal(b)),1);addPay(b,amt,v('pm'),v('pr'));closeOv('ov-dlg');toast('Payment recorded');render();return}
+  if(a==='donote'){const m=v('nt').trim();if(!m)return;b.events.push({t:Date.now(),type:'NOTE',msg:m,by:who()});closeOv('ov-dlg');refreshDetail();return}
+  if(a==='doedit'){b.guest=v('en');b.email=v('ee');b.phone=v('ep');b.special=v('er');b.events.push({t:Date.now(),type:'EDITED',msg:'Edited: guest details',by:who()});closeOv('ov-dlg');toast('Saved');render();return}
+  if(a==='dorefund'){const p=b.payments.find(x=>x.id===D.p),amt=Number(v('ra'));if(!(amt>0)||amt>refundLeft(b,p)+.5)return toast('At most '+fmt(refundLeft(b,p))+' can still be refunded',1);addRefund(b,p,amt);closeOv('ov-dlg');toast('Refund issued');render();return}
+  if(a==='doci'){const x=find(D.b);if(!v('rn').trim())return toast('Enter the room number',1);x.item.roomNo=v('rn').trim();x.item.inAt=Date.now();x.events.push({t:Date.now(),type:'CHECK_IN',msg:'Checked in to room '+x.item.roomNo,by:who()});closeOv('ov-dlg');toast('Checked in');render();return}
+  if(a==='dotci'){const x=find(D.b),n=Number(v('sh'));if(n<0||n>x.pax)return toast('Between 0 and '+x.pax,1);x.item.shown=n;x.item.inAt=Date.now();x.events.push({t:Date.now(),type:'CHECK_IN',msg:n+' of '+x.pax+' guests arrived',by:who()});closeOv('ov-dlg');toast('Saved');render();return}
+  if(a==='dokci'){const x=find(D.b),n=Number(v('kc')),left=x.item.guests-x.item.inCount;if(!(n>0)||n>left)return toast(left+' guest(s) left to check in',1);x.item.inCount+=n;x.item.inAt=x.item.inAt||Date.now();if($('#kt')&&v('kt'))x.item.label=v('kt');x.events.push({t:Date.now(),type:'CHECK_IN',msg:n+' guest(s) through the door ('+x.item.inCount+' of '+x.item.guests+')',by:who()});closeOv('ov-dlg');toast('Checked in');render();return}
+  if(a==='doasg'){const x=find(D.b);x.item.driver=v('ad');x.item.vehicle=v('av');if(x.item.assign==='UNASSIGNED')x.item.assign='ASSIGNED';const d=CAT.TRANSPORT.drivers.find(y=>y.id===x.item.driver);x.events.push({t:Date.now(),type:'ASSIGNMENT',msg:'Assigned to '+d.name,by:who()});closeOv('ov-dlg');toast('Assigned to '+d.name);render();return}
+}
+document.addEventListener('input',e=>{
+  const t=e.target;if(t.id==='aq'){S.auditQ=t.value;const p=t.selectionStart;render();const n=$('#aq');n.focus();n.setSelectionRange(p,p)}
+  else if(t.dataset.mdq){S.mdf[t.dataset.mdq].q=t.value;const p=t.selectionStart;render();const n=$('[data-mdq]');n.focus();n.setSelectionRange(p,p)}
+  else if(t.id==='q'){S.f.q=t.value;S.pg=1;const p=t.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(p,p)}
+  else if(t.id==='cq'){S.f.cq=t.value;const p=t.selectionStart;render();const n=$('#cq');n.focus();n.setSelectionRange(p,p)}
+  else if(t.closest('#nf'))quote();
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.mdq2!==undefined){S.mdf[t.dataset.mdq2].q2=t.value;render();return}if(t.dataset.mds){S.mdf[t.dataset.mds].s=t.value;render();return}if(t.dataset.mdsup!==undefined){S.mdf[t.dataset.mdsup].sup=t.value;render();return}
+  if(t.dataset.invsup!==undefined){S.mdSup=t.value;S.invRoom=null;render();return}if(t.dataset.invroom!==undefined){S.invRoom=t.value;render();return}
+  if(t.dataset.invtotal){const v=Math.max(0,Math.min(500,Number(t.value)||0));S.INV[S.invRoom][t.dataset.invtotal].total=v;auditLog('UPDATE','Inventory',t.dataset.invtotal+' = '+v);render();return}
+  if(t.dataset.invstop){S.INV[S.invRoom][t.dataset.invstop].stop=t.checked;auditLog('UPDATE','Inventory','stop sell '+t.dataset.invstop);render();return}
+  if(t.id==='nsup'){NB.sup=t.value;newBooking();return}
+  if(t.dataset.st){t.checked?S.f.st.add(t.dataset.st):S.f.st.delete(t.dataset.st);S.pg=1;render();return}
+  if(t.dataset.f){S.f[t.dataset.f]=t.value;S.pg=1;render();return}
+  if(t.dataset.pk!==undefined){S.payKind=t.value;render();return}if(t.dataset.rep!==undefined){S.repDays=Number(t.value);render();return}
+  if(t.id==='nprod'){NB.p=t.value;newBooking();return}
+  if(t.closest('#nf'))quote();
+});
+document.addEventListener('input',e=>{const f=e.target.closest('.fld.bad');if(f){f.classList.remove('bad');const m=f.querySelector('.err');if(m)m.remove()}});
+document.addEventListener('submit',e=>{if(e.target.id==='nf')submitNew(e);else if(e.target.id==='lf')doLogin(e);else if(e.target.id==='mdform')mdSubmit(e)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('#ov-dlg'))closeOv('ov-dlg');else if($('#ov-md'))closeOv('ov-md');else if($('#ov-new'))closeOv('ov-new');else if($('#ov-detail'))closeDetail()}});
+addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(S.user&&PAGES[h]&&h!==S.page){S.page=h;render()}});
+render();
+
+</script>

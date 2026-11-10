@@ -1,0 +1,53 @@
+# Local/dev stack: PostgreSQL + the app. For production use Supabase (see README) and run only the `app` service.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD:?set DB_OWNER_PASSWORD in .env}
+      POSTGRES_DB: booking
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env}
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+      - ./prisma/sql/roles.sql:/roles.sql:ro
+      - ./docker/init-roles.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d booking"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports: ["127.0.0.1:5432:5432"]
+
+  # One-shot: apply migrations (as the owner role) and optionally seed. Re-running is safe.
+  migrate:
+    build: .
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_OWNER_PASSWORD}@db:5432/booking
+      DIRECT_URL: postgresql://postgres:${DB_OWNER_PASSWORD}@db:5432/booking
+      SEED_PASSWORD: ${SEED_PASSWORD:-ChangeMe!2026}
+      SEED_SUPER_ADMIN_EMAIL: ${SEED_SUPER_ADMIN_EMAIL:-superadmin@example.com}
+      RUN_SEED: ${RUN_SEED:-true}
+    command: ["sh", "-c", "npx prisma migrate deploy && if [ \"$$RUN_SEED\" = true ]; then npx tsx prisma/seed.ts; fi"]
+    restart: "no"
+
+  app:
+    build: .
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    environment:
+      DATABASE_URL: postgresql://app_runtime:${APP_DB_PASSWORD}@db:5432/booking
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in .env (openssl rand -base64 48)}
+      CORS_ORIGIN: ${PUBLIC_URL:-http://localhost:4000}
+      APP_URL: ${PUBLIC_URL:-http://localhost:4000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-}
+    volumes:
+      - uploads:/data/uploads
+    ports: ["4000:4000"]
+    restart: unless-stopped
+
+volumes:
+  dbdata:
+  uploads:

@@ -1,0 +1,2025 @@
+// Generated together with migrations/*/migration.sql from one model definition.
+// Supabase: DATABASE_URL = pooled (pgbouncer) URL for the app, DIRECT_URL = direct URL for migrations.
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SupplierStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  SUPPLIER_ADMIN
+  SUPPLIER_STAFF
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  RESTORE
+  ACTIVATE
+  DEACTIVATE
+  LOGIN
+  LOGIN_FAILED
+  LOGOUT
+  PASSWORD_RESET
+  IMPORT
+  EXPORT
+}
+
+enum AmenityScope {
+  HOTEL
+  ROOM
+  CLUB
+  VEHICLE
+  TRIP
+}
+
+enum CategoryType {
+  HOTEL
+  TRIP
+  TRANSPORT
+  CLUB
+}
+
+enum CityKind {
+  CITY
+  AREA
+}
+
+enum ChargeType {
+  TAX
+  SERVICE_CHARGE
+}
+
+enum ChargeAppliesTo {
+  ALL
+  HOTEL
+  TRIP
+  TRANSPORT
+  CLUB
+}
+
+enum MealPlan {
+  ROOM_ONLY
+  BREAKFAST
+  HALF_BOARD
+  FULL_BOARD
+  ALL_INCLUSIVE
+}
+
+enum Difficulty {
+  EASY
+  MODERATE
+  CHALLENGING
+  EXTREME
+}
+
+enum VehicleKind {
+  CAR
+  VAN
+  BUS
+  BOAT
+  SCOOTER
+  OTHER
+}
+
+enum TransportServiceType {
+  AIRPORT_TRANSFER
+  CHARTER
+  SHUTTLE
+  FERRY
+}
+
+enum VenueKind {
+  BEACH_CLUB
+  NIGHTCLUB
+  LOUNGE
+  OTHER
+}
+
+/// Tenant root. SUP-0000 is the platform pseudo-supplier that owns shared master data.
+model Supplier {
+  id                      String                   @id(map: "suppliers_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                    String                   @default(dbgenerated("(('SUP-'::text || lpad((nextval('supplier_code_seq'::regclass))::text, 4, '0'::text)))")) @db.VarChar(20)
+  name                    String                   @db.VarChar(200)
+  legalName               String?                  @db.VarChar(200) @map("legal_name")
+  email                   String                   @db.VarChar(254)
+  phone                   String?                  @db.VarChar(40)
+  address                 String?
+  countryCode             String?                  @db.Char(2) @map("country_code")
+  taxId                   String?                  @db.VarChar(60) @map("tax_id")
+  commissionPct           Decimal                  @default(0) @db.Decimal(5,2) @map("commission_pct")
+  status                  SupplierStatus           @default(ACTIVE)
+  logoUrl                 String?                  @map("logo_url")
+  isPlatform              Boolean                  @default(false) @map("is_platform")
+  createdBy               String?                  @db.Uuid @map("created_by")
+  updatedBy               String?                  @db.Uuid @map("updated_by")
+  createdAt               DateTime                 @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt               DateTime                 @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt               DateTime?                @db.Timestamptz(6) @map("deleted_at")
+  country                 Country?                 @relation("Supplier_country", fields: [countryCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "suppliers_country_code_fkey")
+  users                   User[]                   @relation("User_supplier")
+  emailOutbox             EmailOutbox[]            @relation("EmailOutbox_supplier")
+  integrationConnections  IntegrationConnection[] @relation("IntegrationConnection_supplier")
+  webhookEndpoints        WebhookEndpoint[]        @relation("WebhookEndpoint_supplier")
+  apiKeys                 ApiKey[]                 @relation("ApiKey_supplier")
+  cities                  City[]                   @relation("City_supplier")
+  amenities               Amenity[]                @relation("Amenity_supplier")
+  categories              Category[]               @relation("Category_supplier")
+  taxCharges              TaxCharge[]              @relation("TaxCharge_supplier")
+  cancellationPolicies    CancellationPolicy[]     @relation("CancellationPolicy_supplier")
+  cancellationPolicyRules CancellationPolicyRule[] @relation("CancellationPolicyRule_supplier")
+  mediaAssets             MediaAsset[]             @relation("MediaAsset_supplier")
+  hotels                  Hotel[]                  @relation("Hotel_supplier")
+  hotelAmenities          HotelAmenity[]           @relation("HotelAmenity_supplier")
+  hotelImages             HotelImage[]             @relation("HotelImage_supplier")
+  roomTypes               RoomType[]               @relation("RoomType_supplier")
+  roomTypeAmenities       RoomTypeAmenity[]        @relation("RoomTypeAmenity_supplier")
+  roomTypeImages          RoomTypeImage[]          @relation("RoomTypeImage_supplier")
+  ratePlans               RatePlan[]               @relation("RatePlan_supplier")
+  roomInventories         RoomInventory[]          @relation("RoomInventory_supplier")
+  trips                   Trip[]                   @relation("Trip_supplier")
+  tripImages              TripImage[]              @relation("TripImage_supplier")
+  tripItineraryDaies      TripItineraryDay[]       @relation("TripItineraryDay_supplier")
+  tripVariants            TripVariant[]            @relation("TripVariant_supplier")
+  tripSchedules           TripSchedule[]           @relation("TripSchedule_supplier")
+  tripAddons              TripAddon[]              @relation("TripAddon_supplier")
+  vehicleTypes            VehicleType[]            @relation("VehicleType_supplier")
+  vehicleTypeAmenities    VehicleTypeAmenity[]     @relation("VehicleTypeAmenity_supplier")
+  vehicleTypeImages       VehicleTypeImage[]       @relation("VehicleTypeImage_supplier")
+  transportZones          TransportZone[]          @relation("TransportZone_supplier")
+  transportServices       TransportService[]       @relation("TransportService_supplier")
+  zoneRoutePrices         ZoneRoutePrice[]         @relation("ZoneRoutePrice_supplier")
+  drivers                 Driver[]                 @relation("Driver_supplier")
+  vehicles                Vehicle[]                @relation("Vehicle_supplier")
+  clubs                   Club[]                   @relation("Club_supplier")
+  clubOpeningHours        ClubOpeningHour[]        @relation("ClubOpeningHour_supplier")
+  clubAmenities           ClubAmenity[]            @relation("ClubAmenity_supplier")
+  clubImages              ClubImage[]              @relation("ClubImage_supplier")
+  clubTicketTypes         ClubTicketType[]         @relation("ClubTicketType_supplier")
+  clubTablePackages       ClubTablePackage[]       @relation("ClubTablePackage_supplier")
+  clubEvents              ClubEvent[]              @relation("ClubEvent_supplier")
+
+  customers Customer[] @relation("Customer_supplier") // booking
+  bookingSequences BookingSequence[] @relation("BookingSequence_supplier") // booking
+  bookings Booking[] @relation("Booking_supplier") // booking
+  bookingLines BookingLine[] @relation("BookingLine_supplier") // booking
+  bookingGuests BookingGuest[] @relation("BookingGuest_supplier") // booking
+  hotelBookingItems HotelBookingItem[] @relation("HotelBookingItem_supplier") // booking
+  tripBookingItems TripBookingItem[] @relation("TripBookingItem_supplier") // booking
+  transportBookingItems TransportBookingItem[] @relation("TransportBookingItem_supplier") // booking
+  clubBookingItems ClubBookingItem[] @relation("ClubBookingItem_supplier") // booking
+  payments Payment[] @relation("Payment_supplier") // booking
+  bookingEvents BookingEvent[] @relation("BookingEvent_supplier") // booking
+  @@unique([code], map: "suppliers_code_key")
+  @@index([status], map: "suppliers_status_idx")
+  @@index([countryCode], map: "suppliers_country_code_idx")
+  @@map("suppliers")
+}
+
+model User {
+  id                  String               @id(map: "users_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId          String?              @db.Uuid @map("supplier_id")
+  email               String               @db.VarChar(254)
+  passwordHash        String               @map("password_hash")
+  name                String               @db.VarChar(120)
+  role                UserRole
+  status              UserStatus           @default(ACTIVE)
+  failedLoginCount    Int                  @default(0) @map("failed_login_count")
+  lockedUntil         DateTime?            @db.Timestamptz(6) @map("locked_until")
+  lastLoginAt         DateTime?            @db.Timestamptz(6) @map("last_login_at")
+  passwordChangedAt   DateTime?            @db.Timestamptz(6) @map("password_changed_at")
+  mustChangePassword  Boolean              @default(false) @map("must_change_password")
+  createdBy           String?              @db.Uuid @map("created_by")
+  updatedBy           String?              @db.Uuid @map("updated_by")
+  createdAt           DateTime             @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt           DateTime             @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt           DateTime?            @db.Timestamptz(6) @map("deleted_at")
+  supplier            Supplier?            @relation("User_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "users_supplier_id_fkey")
+  refreshTokens       RefreshToken[]       @relation("RefreshToken_user")
+  passwordResetTokens PasswordResetToken[] @relation("PasswordResetToken_user")
+
+  @@unique([email], map: "users_email_key")
+  @@index([supplierId, status], map: "users_supplier_id_status_idx")
+  @@map("users")
+}
+
+model RefreshToken {
+  id           String    @id(map: "refresh_tokens_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String    @db.Uuid @map("user_id")
+  familyId     String    @db.Uuid @map("family_id")
+  tokenHash    String    @db.VarChar(64) @map("token_hash")
+  expiresAt    DateTime  @db.Timestamptz(6) @map("expires_at")
+  revokedAt    DateTime? @db.Timestamptz(6) @map("revoked_at")
+  replacedById String?   @db.Uuid @map("replaced_by_id")
+  userAgent    String?   @map("user_agent")
+  ip           String?   @db.VarChar(45)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6) @map("created_at")
+  user         User      @relation("RefreshToken_user", fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "refresh_tokens_user_id_fkey")
+
+  @@unique([tokenHash], map: "refresh_tokens_token_hash_key")
+  @@index([familyId], map: "refresh_tokens_family_id_idx")
+  @@index([userId], map: "refresh_tokens_user_id_idx")
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id(map: "password_reset_tokens_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @db.Uuid @map("user_id")
+  tokenHash String    @db.VarChar(64) @map("token_hash")
+  expiresAt DateTime  @db.Timestamptz(6) @map("expires_at")
+  usedAt    DateTime? @db.Timestamptz(6) @map("used_at")
+  createdAt DateTime  @default(now()) @db.Timestamptz(6) @map("created_at")
+  user      User      @relation("PasswordResetToken_user", fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "password_reset_tokens_user_id_fkey")
+
+  @@unique([tokenHash], map: "password_reset_tokens_token_hash_key")
+  @@index([userId], map: "password_reset_tokens_user_id_idx")
+  @@map("password_reset_tokens")
+}
+
+model LoginAttempt {
+  id        String   @id(map: "login_attempts_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email     String   @db.VarChar(254)
+  userId    String?  @db.Uuid @map("user_id")
+  ip        String?  @db.VarChar(45)
+  success   Boolean
+  reason    String?  @db.VarChar(60)
+  createdAt DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  @@index([email, createdAt], map: "login_attempts_email_created_at_idx")
+  @@index([ip, createdAt], map: "login_attempts_ip_created_at_idx")
+  @@map("login_attempts")
+}
+
+/// Append-only. A trigger blocks UPDATE and DELETE. No FKs so history survives purges.
+model AuditLog {
+  id         String      @id(map: "audit_logs_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String?     @db.Uuid @map("supplier_id")
+  userId     String?     @db.Uuid @map("user_id")
+  userEmail  String?     @db.VarChar(254) @map("user_email")
+  action     AuditAction
+  entityType String      @db.VarChar(60) @map("entity_type")
+  entityId   String?     @db.Uuid @map("entity_id")
+  before     Json?
+  after      Json?
+  ip         String?     @db.VarChar(45)
+  userAgent  String?     @map("user_agent")
+  requestId  String?     @db.VarChar(64) @map("request_id")
+  createdAt  DateTime    @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  @@index([supplierId, createdAt], map: "audit_logs_supplier_id_created_at_idx")
+  @@index([entityType, entityId], map: "audit_logs_entity_type_entity_id_idx")
+  @@index([userId, createdAt], map: "audit_logs_user_id_created_at_idx")
+  @@map("audit_logs")
+}
+
+/// Global ISO reference data (no supplier_id).
+model Country {
+  id             String          @id(map: "countries_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code           String          @db.Char(2)
+  iso3           String?         @db.Char(3)
+  name           String          @db.VarChar(120)
+  phoneCode      String?         @db.VarChar(8) @map("phone_code")
+  status         RecordStatus    @default(ACTIVE)
+  createdBy      String?         @db.Uuid @map("created_by")
+  updatedBy      String?         @db.Uuid @map("updated_by")
+  createdAt      DateTime        @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt      DateTime        @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt      DateTime?       @db.Timestamptz(6) @map("deleted_at")
+  suppliers      Supplier[]      @relation("Supplier_country")
+  cities         City[]          @relation("City_country")
+  hotels         Hotel[]         @relation("Hotel_country")
+  trips          Trip[]          @relation("Trip_country")
+  transportZones TransportZone[] @relation("TransportZone_country")
+  clubs          Club[]          @relation("Club_country")
+
+  @@unique([code], map: "countries_code_key")
+  @@map("countries")
+}
+
+/// Global ISO 4217 reference data (no supplier_id).
+model Currency {
+  id                String             @id(map: "currencies_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code              String             @db.Char(3)
+  name              String             @db.VarChar(80)
+  symbol            String             @db.VarChar(8)
+  decimals          Int                @default(2)
+  status            RecordStatus       @default(ACTIVE)
+  createdBy         String?            @db.Uuid @map("created_by")
+  updatedBy         String?            @db.Uuid @map("updated_by")
+  createdAt         DateTime           @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt         DateTime           @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt         DateTime?          @db.Timestamptz(6) @map("deleted_at")
+  hotels            Hotel[]            @relation("Hotel_currency")
+  roomTypes         RoomType[]         @relation("RoomType_currency")
+  ratePlans         RatePlan[]         @relation("RatePlan_currency")
+  tripVariants      TripVariant[]      @relation("TripVariant_currency")
+  tripAddons        TripAddon[]        @relation("TripAddon_currency")
+  transportServices TransportService[] @relation("TransportService_currency")
+  zoneRoutePrices   ZoneRoutePrice[]   @relation("ZoneRoutePrice_currency")
+  clubTicketTypes   ClubTicketType[]   @relation("ClubTicketType_currency")
+  clubTablePackages ClubTablePackage[] @relation("ClubTablePackage_currency")
+  clubEvents        ClubEvent[]        @relation("ClubEvent_currency")
+
+  bookings Booking[] @relation("Booking_currency") // booking
+  payments Payment[] @relation("Payment_currency") // booking
+  @@unique([code], map: "currencies_code_key")
+  @@map("currencies")
+}
+
+model City {
+  id             String          @id(map: "cities_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId     String          @db.Uuid @map("supplier_id")
+  code           String          @db.VarChar(60)
+  name           String          @db.VarChar(150)
+  kind           CityKind        @default(CITY)
+  countryCode    String          @db.Char(2) @map("country_code")
+  parentId       String?         @db.Uuid @map("parent_id")
+  latitude       Decimal?        @db.Decimal(9,6)
+  longitude      Decimal?        @db.Decimal(9,6)
+  timezone       String?         @db.VarChar(60)
+  status         RecordStatus    @default(ACTIVE)
+  createdBy      String?         @db.Uuid @map("created_by")
+  updatedBy      String?         @db.Uuid @map("updated_by")
+  createdAt      DateTime        @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt      DateTime        @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt      DateTime?       @db.Timestamptz(6) @map("deleted_at")
+  supplier       Supplier        @relation("City_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "cities_supplier_id_fkey")
+  country        Country         @relation("City_country", fields: [countryCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "cities_country_code_fkey")
+  parent         City?           @relation("City_parent", fields: [supplierId, parentId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "cities_supplier_id_parent_id_fkey")
+  children       City[]          @relation("City_parent")
+  hotels         Hotel[]         @relation("Hotel_city")
+  trips          Trip[]          @relation("Trip_city")
+  transportZones TransportZone[] @relation("TransportZone_city")
+  clubs          Club[]          @relation("Club_city")
+
+  @@unique([supplierId, code], map: "cities_supplier_id_code_key")
+  @@unique([supplierId, id], map: "cities_supplier_id_id_key")
+  @@index([supplierId, status], map: "cities_supplier_id_status_idx")
+  @@index([supplierId, countryCode], map: "cities_supplier_id_country_code_idx")
+  @@index([countryCode], map: "cities_country_code_idx")
+  @@index([supplierId, parentId], map: "cities_supplier_id_parent_id_idx")
+  @@map("cities")
+}
+
+model Amenity {
+  id                   String               @id(map: "amenities_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId           String               @db.Uuid @map("supplier_id")
+  code                 String               @db.VarChar(60)
+  name                 String               @db.VarChar(120)
+  scope                AmenityScope
+  icon                 String?              @db.VarChar(60)
+  sortOrder            Int                  @default(0) @map("sort_order")
+  status               RecordStatus         @default(ACTIVE)
+  createdBy            String?              @db.Uuid @map("created_by")
+  updatedBy            String?              @db.Uuid @map("updated_by")
+  createdAt            DateTime             @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt            DateTime             @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt            DateTime?            @db.Timestamptz(6) @map("deleted_at")
+  supplier             Supplier             @relation("Amenity_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "amenities_supplier_id_fkey")
+  hotelAmenities       HotelAmenity[]       @relation("HotelAmenity_amenity")
+  roomTypeAmenities    RoomTypeAmenity[]    @relation("RoomTypeAmenity_amenity")
+  vehicleTypeAmenities VehicleTypeAmenity[] @relation("VehicleTypeAmenity_amenity")
+  clubAmenities        ClubAmenity[]        @relation("ClubAmenity_amenity")
+
+  @@unique([supplierId, code], map: "amenities_supplier_id_code_key")
+  @@index([supplierId, status], map: "amenities_supplier_id_status_idx")
+  @@index([supplierId, scope], map: "amenities_supplier_id_scope_idx")
+  @@map("amenities")
+}
+
+model Category {
+  id          String       @id(map: "categories_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId  String       @db.Uuid @map("supplier_id")
+  code        String       @db.VarChar(60)
+  name        String       @db.VarChar(120)
+  type        CategoryType
+  parentId    String?      @db.Uuid @map("parent_id")
+  description String?
+  sortOrder   Int          @default(0) @map("sort_order")
+  status      RecordStatus @default(ACTIVE)
+  createdBy   String?      @db.Uuid @map("created_by")
+  updatedBy   String?      @db.Uuid @map("updated_by")
+  createdAt   DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt   DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt   DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier    Supplier     @relation("Category_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "categories_supplier_id_fkey")
+  parent      Category?    @relation("Category_parent", fields: [supplierId, parentId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "categories_supplier_id_parent_id_fkey")
+  children    Category[]   @relation("Category_parent")
+  trips       Trip[]       @relation("Trip_category")
+  clubs       Club[]       @relation("Club_category")
+
+  @@unique([supplierId, code], map: "categories_supplier_id_code_key")
+  @@unique([supplierId, id], map: "categories_supplier_id_id_key")
+  @@index([supplierId, status], map: "categories_supplier_id_status_idx")
+  @@index([supplierId, type], map: "categories_supplier_id_type_idx")
+  @@index([supplierId, parentId], map: "categories_supplier_id_parent_id_idx")
+  @@map("categories")
+}
+
+model TaxCharge {
+  id          String          @id(map: "tax_charges_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId  String          @db.Uuid @map("supplier_id")
+  code        String          @db.VarChar(40)
+  name        String          @db.VarChar(120)
+  type        ChargeType
+  ratePct     Decimal         @db.Decimal(5,2) @map("rate_pct")
+  isInclusive Boolean         @default(false) @map("is_inclusive")
+  appliesTo   ChargeAppliesTo @default(ALL) @map("applies_to")
+  status      RecordStatus    @default(ACTIVE)
+  createdBy   String?         @db.Uuid @map("created_by")
+  updatedBy   String?         @db.Uuid @map("updated_by")
+  createdAt   DateTime        @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt   DateTime        @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt   DateTime?       @db.Timestamptz(6) @map("deleted_at")
+  supplier    Supplier        @relation("TaxCharge_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "tax_charges_supplier_id_fkey")
+
+  @@unique([supplierId, code], map: "tax_charges_supplier_id_code_key")
+  @@index([supplierId, status], map: "tax_charges_supplier_id_status_idx")
+  @@map("tax_charges")
+}
+
+model CancellationPolicy {
+  id                String                   @id(map: "cancellation_policies_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId        String                   @db.Uuid @map("supplier_id")
+  code              String                   @db.VarChar(40)
+  name              String                   @db.VarChar(150)
+  description       String?
+  status            RecordStatus             @default(ACTIVE)
+  createdBy         String?                  @db.Uuid @map("created_by")
+  updatedBy         String?                  @db.Uuid @map("updated_by")
+  createdAt         DateTime                 @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt         DateTime                 @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt         DateTime?                @db.Timestamptz(6) @map("deleted_at")
+  supplier          Supplier                 @relation("CancellationPolicy_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "cancellation_policies_supplier_id_fkey")
+  rules             CancellationPolicyRule[] @relation("CancellationPolicyRule_policy")
+  ratePlans         RatePlan[]               @relation("RatePlan_cancellationPolicy")
+  trips             Trip[]                   @relation("Trip_cancellationPolicy")
+  transportServices TransportService[]       @relation("TransportService_cancellationPolicy")
+
+  bookings Booking[] @relation("Booking_cancellationPolicy") // booking
+  @@unique([supplierId, code], map: "cancellation_policies_supplier_id_code_key")
+  @@unique([supplierId, id], map: "cancellation_policies_supplier_id_id_key")
+  @@index([supplierId, status], map: "cancellation_policies_supplier_id_status_idx")
+  @@map("cancellation_policies")
+}
+
+model CancellationPolicyRule {
+  id               String             @id(map: "cancellation_policy_rules_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId       String             @db.Uuid @map("supplier_id")
+  policyId         String             @db.Uuid @map("policy_id")
+  hoursBeforeStart Int                @map("hours_before_start")
+  refundPercent    Decimal            @db.Decimal(5,2) @map("refund_percent")
+  sortOrder        Int                @default(0) @map("sort_order")
+  status           RecordStatus       @default(ACTIVE)
+  createdBy        String?            @db.Uuid @map("created_by")
+  updatedBy        String?            @db.Uuid @map("updated_by")
+  createdAt        DateTime           @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt        DateTime           @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt        DateTime?          @db.Timestamptz(6) @map("deleted_at")
+  supplier         Supplier           @relation("CancellationPolicyRule_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "cancellation_policy_rules_supplier_id_fkey")
+  policy           CancellationPolicy @relation("CancellationPolicyRule_policy", fields: [supplierId, policyId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "cancellation_policy_rules_supplier_id_policy_id_fkey")
+
+  @@unique([supplierId, policyId, hoursBeforeStart], map: "cancellation_policy_rules_supplier_id_policy_id_hours__126c3e23")
+  @@index([supplierId, status], map: "cancellation_policy_rules_supplier_id_status_idx")
+  @@map("cancellation_policy_rules")
+}
+
+model MediaAsset {
+  id                String             @id(map: "media_assets_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId        String             @db.Uuid @map("supplier_id")
+  storageKey        String             @db.VarChar(300) @map("storage_key")
+  url               String
+  originalName      String             @db.VarChar(255) @map("original_name")
+  mimeType          String             @db.VarChar(100) @map("mime_type")
+  sizeBytes         BigInt             @map("size_bytes")
+  width             Int?
+  height            Int?
+  altText           String?            @db.VarChar(255) @map("alt_text")
+  folder            String?            @db.VarChar(120)
+  checksum          String?            @db.VarChar(64)
+  status            RecordStatus       @default(ACTIVE)
+  createdBy         String?            @db.Uuid @map("created_by")
+  updatedBy         String?            @db.Uuid @map("updated_by")
+  createdAt         DateTime           @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt         DateTime           @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt         DateTime?          @db.Timestamptz(6) @map("deleted_at")
+  supplier          Supplier           @relation("MediaAsset_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "media_assets_supplier_id_fkey")
+  hotelImages       HotelImage[]       @relation("HotelImage_media")
+  roomTypeImages    RoomTypeImage[]    @relation("RoomTypeImage_media")
+  tripImages        TripImage[]        @relation("TripImage_media")
+  vehicleTypeImages VehicleTypeImage[] @relation("VehicleTypeImage_media")
+  clubImages        ClubImage[]        @relation("ClubImage_media")
+
+  @@unique([supplierId, storageKey], map: "media_assets_supplier_id_storage_key_key")
+  @@unique([supplierId, id], map: "media_assets_supplier_id_id_key")
+  @@index([supplierId, status], map: "media_assets_supplier_id_status_idx")
+  @@index([supplierId, folder], map: "media_assets_supplier_id_folder_idx")
+  @@map("media_assets")
+}
+
+model Hotel {
+  id             String         @id(map: "hotels_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId     String         @db.Uuid @map("supplier_id")
+  code           String         @db.VarChar(40)
+  name           String         @db.VarChar(200)
+  starRating     Int?           @map("star_rating")
+  description    String?
+  address        String?
+  postalCode     String?        @db.VarChar(20) @map("postal_code")
+  cityId         String?        @db.Uuid @map("city_id")
+  countryCode    String         @db.Char(2) @map("country_code")
+  latitude       Decimal?       @db.Decimal(9,6)
+  longitude      Decimal?       @db.Decimal(9,6)
+  checkInTime    String         @default("14:00") @db.VarChar(5) @map("check_in_time")
+  checkOutTime   String         @default("12:00") @db.VarChar(5) @map("check_out_time")
+  contactName    String?        @db.VarChar(120) @map("contact_name")
+  contactEmail   String?        @db.VarChar(254) @map("contact_email")
+  contactPhone   String?        @db.VarChar(40) @map("contact_phone")
+  website        String?
+  policies       Json           @default("{}")
+  currencyCode   String         @db.Char(3) @map("currency_code")
+  status         RecordStatus   @default(ACTIVE)
+  createdBy      String?        @db.Uuid @map("created_by")
+  updatedBy      String?        @db.Uuid @map("updated_by")
+  createdAt      DateTime       @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt      DateTime       @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt      DateTime?      @db.Timestamptz(6) @map("deleted_at")
+  supplier       Supplier       @relation("Hotel_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "hotels_supplier_id_fkey")
+  city           City?          @relation("Hotel_city", fields: [cityId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "hotels_city_id_fkey")
+  country        Country        @relation("Hotel_country", fields: [countryCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "hotels_country_code_fkey")
+  currency       Currency       @relation("Hotel_currency", fields: [currencyCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "hotels_currency_code_fkey")
+  hotelAmenities HotelAmenity[] @relation("HotelAmenity_hotel")
+  hotelImages    HotelImage[]   @relation("HotelImage_hotel")
+  roomTypes      RoomType[]     @relation("RoomType_hotel")
+
+  hotelBookingItems HotelBookingItem[] @relation("HotelBookingItem_hotel") // booking
+  @@unique([supplierId, code], map: "hotels_supplier_id_code_key")
+  @@unique([supplierId, id], map: "hotels_supplier_id_id_key")
+  @@index([supplierId, status], map: "hotels_supplier_id_status_idx")
+  @@index([cityId], map: "hotels_city_id_idx")
+  @@index([countryCode], map: "hotels_country_code_idx")
+  @@index([currencyCode], map: "hotels_currency_code_idx")
+  @@map("hotels")
+}
+
+/// Join row. Replaced (hard delete) on edit.
+model HotelAmenity {
+  id         String       @id(map: "hotel_amenities_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String       @db.Uuid @map("supplier_id")
+  hotelId    String       @db.Uuid @map("hotel_id")
+  amenityId  String       @db.Uuid @map("amenity_id")
+  status     RecordStatus @default(ACTIVE)
+  createdBy  String?      @db.Uuid @map("created_by")
+  updatedBy  String?      @db.Uuid @map("updated_by")
+  createdAt  DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt  DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt  DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier   Supplier     @relation("HotelAmenity_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "hotel_amenities_supplier_id_fkey")
+  hotel      Hotel        @relation("HotelAmenity_hotel", fields: [supplierId, hotelId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "hotel_amenities_supplier_id_hotel_id_fkey")
+  amenity    Amenity      @relation("HotelAmenity_amenity", fields: [amenityId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "hotel_amenities_amenity_id_fkey")
+
+  @@unique([hotelId, amenityId], map: "hotel_amenities_hotel_id_amenity_id_key")
+  @@index([supplierId, status], map: "hotel_amenities_supplier_id_status_idx")
+  @@index([supplierId, hotelId], map: "hotel_amenities_supplier_id_hotel_id_idx")
+  @@index([amenityId], map: "hotel_amenities_amenity_id_idx")
+  @@map("hotel_amenities")
+}
+
+model HotelImage {
+  id         String       @id(map: "hotel_images_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String       @db.Uuid @map("supplier_id")
+  hotelId    String       @db.Uuid @map("hotel_id")
+  mediaId    String       @db.Uuid @map("media_id")
+  sortOrder  Int          @default(0) @map("sort_order")
+  caption    String?      @db.VarChar(255)
+  isCover    Boolean      @default(false) @map("is_cover")
+  status     RecordStatus @default(ACTIVE)
+  createdBy  String?      @db.Uuid @map("created_by")
+  updatedBy  String?      @db.Uuid @map("updated_by")
+  createdAt  DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt  DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt  DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier   Supplier     @relation("HotelImage_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "hotel_images_supplier_id_fkey")
+  hotel      Hotel        @relation("HotelImage_hotel", fields: [supplierId, hotelId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "hotel_images_supplier_id_hotel_id_fkey")
+  media      MediaAsset   @relation("HotelImage_media", fields: [supplierId, mediaId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "hotel_images_supplier_id_media_id_fkey")
+
+  @@unique([hotelId, mediaId], map: "hotel_images_hotel_id_media_id_key")
+  @@index([supplierId, status], map: "hotel_images_supplier_id_status_idx")
+  @@index([hotelId, sortOrder], map: "hotel_images_hotel_id_sort_order_idx")
+  @@index([supplierId, hotelId], map: "hotel_images_supplier_id_hotel_id_idx")
+  @@index([supplierId, mediaId], map: "hotel_images_supplier_id_media_id_idx")
+  @@map("hotel_images")
+}
+
+model RoomType {
+  id                String            @id(map: "room_types_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId        String            @db.Uuid @map("supplier_id")
+  hotelId           String            @db.Uuid @map("hotel_id")
+  code              String            @db.VarChar(40)
+  name              String            @db.VarChar(150)
+  bedType           String?           @db.VarChar(60) @map("bed_type")
+  maxAdults         Int               @default(2) @map("max_adults")
+  maxChildren       Int               @default(0) @map("max_children")
+  sizeM2            Decimal?          @db.Decimal(6,2) @map("size_m2")
+  description       String?
+  basePrice         Decimal           @db.Decimal(12,2) @map("base_price")
+  currencyCode      String            @db.Char(3) @map("currency_code")
+  status            RecordStatus      @default(ACTIVE)
+  createdBy         String?           @db.Uuid @map("created_by")
+  updatedBy         String?           @db.Uuid @map("updated_by")
+  createdAt         DateTime          @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt         DateTime          @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt         DateTime?         @db.Timestamptz(6) @map("deleted_at")
+  supplier          Supplier          @relation("RoomType_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "room_types_supplier_id_fkey")
+  hotel             Hotel             @relation("RoomType_hotel", fields: [supplierId, hotelId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "room_types_supplier_id_hotel_id_fkey")
+  currency          Currency          @relation("RoomType_currency", fields: [currencyCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "room_types_currency_code_fkey")
+  roomTypeAmenities RoomTypeAmenity[] @relation("RoomTypeAmenity_roomType")
+  roomTypeImages    RoomTypeImage[]   @relation("RoomTypeImage_roomType")
+  ratePlans         RatePlan[]        @relation("RatePlan_roomType")
+  inventory         RoomInventory[]   @relation("RoomInventory_roomType")
+
+  hotelBookingItems HotelBookingItem[] @relation("HotelBookingItem_roomType") // booking
+  @@unique([supplierId, hotelId, code], map: "room_types_supplier_id_hotel_id_code_key")
+  @@unique([supplierId, id], map: "room_types_supplier_id_id_key")
+  @@index([supplierId, status], map: "room_types_supplier_id_status_idx")
+  @@index([currencyCode], map: "room_types_currency_code_idx")
+  @@map("room_types")
+}
+
+model RoomTypeAmenity {
+  id         String       @id(map: "room_type_amenities_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String       @db.Uuid @map("supplier_id")
+  roomTypeId String       @db.Uuid @map("room_type_id")
+  amenityId  String       @db.Uuid @map("amenity_id")
+  status     RecordStatus @default(ACTIVE)
+  createdBy  String?      @db.Uuid @map("created_by")
+  updatedBy  String?      @db.Uuid @map("updated_by")
+  createdAt  DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt  DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt  DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier   Supplier     @relation("RoomTypeAmenity_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "room_type_amenities_supplier_id_fkey")
+  roomType   RoomType     @relation("RoomTypeAmenity_roomType", fields: [supplierId, roomTypeId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "room_type_amenities_supplier_id_room_type_id_fkey")
+  amenity    Amenity      @relation("RoomTypeAmenity_amenity", fields: [amenityId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "room_type_amenities_amenity_id_fkey")
+
+  @@unique([roomTypeId, amenityId], map: "room_type_amenities_room_type_id_amenity_id_key")
+  @@index([supplierId, status], map: "room_type_amenities_supplier_id_status_idx")
+  @@index([supplierId, roomTypeId], map: "room_type_amenities_supplier_id_room_type_id_idx")
+  @@index([amenityId], map: "room_type_amenities_amenity_id_idx")
+  @@map("room_type_amenities")
+}
+
+model RoomTypeImage {
+  id         String       @id(map: "room_type_images_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String       @db.Uuid @map("supplier_id")
+  roomTypeId String       @db.Uuid @map("room_type_id")
+  mediaId    String       @db.Uuid @map("media_id")
+  sortOrder  Int          @default(0) @map("sort_order")
+  caption    String?      @db.VarChar(255)
+  isCover    Boolean      @default(false) @map("is_cover")
+  status     RecordStatus @default(ACTIVE)
+  createdBy  String?      @db.Uuid @map("created_by")
+  updatedBy  String?      @db.Uuid @map("updated_by")
+  createdAt  DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt  DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt  DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier   Supplier     @relation("RoomTypeImage_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "room_type_images_supplier_id_fkey")
+  roomType   RoomType     @relation("RoomTypeImage_roomType", fields: [supplierId, roomTypeId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "room_type_images_supplier_id_room_type_id_fkey")
+  media      MediaAsset   @relation("RoomTypeImage_media", fields: [supplierId, mediaId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "room_type_images_supplier_id_media_id_fkey")
+
+  @@unique([roomTypeId, mediaId], map: "room_type_images_room_type_id_media_id_key")
+  @@index([supplierId, status], map: "room_type_images_supplier_id_status_idx")
+  @@index([roomTypeId, sortOrder], map: "room_type_images_room_type_id_sort_order_idx")
+  @@index([supplierId, roomTypeId], map: "room_type_images_supplier_id_room_type_id_idx")
+  @@index([supplierId, mediaId], map: "room_type_images_supplier_id_media_id_idx")
+  @@map("room_type_images")
+}
+
+model RatePlan {
+  id                   String              @id(map: "rate_plans_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId           String              @db.Uuid @map("supplier_id")
+  roomTypeId           String              @db.Uuid @map("room_type_id")
+  code                 String              @db.VarChar(40)
+  name                 String              @db.VarChar(150)
+  dateFrom             DateTime            @db.Date @map("date_from")
+  dateTo               DateTime            @db.Date @map("date_to")
+  price                Decimal             @db.Decimal(12,2)
+  currencyCode         String              @db.Char(3) @map("currency_code")
+  mealPlan             MealPlan            @default(ROOM_ONLY) @map("meal_plan")
+  cancellationPolicyId String?             @db.Uuid @map("cancellation_policy_id")
+  minStay              Int                 @default(1) @map("min_stay")
+  status               RecordStatus        @default(ACTIVE)
+  createdBy            String?             @db.Uuid @map("created_by")
+  updatedBy            String?             @db.Uuid @map("updated_by")
+  createdAt            DateTime            @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt            DateTime            @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt            DateTime?           @db.Timestamptz(6) @map("deleted_at")
+  supplier             Supplier            @relation("RatePlan_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "rate_plans_supplier_id_fkey")
+  roomType             RoomType            @relation("RatePlan_roomType", fields: [supplierId, roomTypeId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "rate_plans_supplier_id_room_type_id_fkey")
+  currency             Currency            @relation("RatePlan_currency", fields: [currencyCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "rate_plans_currency_code_fkey")
+  cancellationPolicy   CancellationPolicy? @relation("RatePlan_cancellationPolicy", fields: [supplierId, cancellationPolicyId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "rate_plans_supplier_id_cancellation_policy_id_fkey")
+
+  hotelBookingItems HotelBookingItem[] @relation("HotelBookingItem_ratePlan") // booking
+  @@unique([supplierId, roomTypeId, code], map: "rate_plans_supplier_id_room_type_id_code_key")
+  @@index([supplierId, status], map: "rate_plans_supplier_id_status_idx")
+  @@index([roomTypeId, dateFrom, dateTo], map: "rate_plans_room_type_id_date_from_date_to_idx")
+  @@index([currencyCode], map: "rate_plans_currency_code_idx")
+  @@index([supplierId, cancellationPolicyId], map: "rate_plans_supplier_id_cancellation_policy_id_idx")
+  @@unique([supplierId, id], map: "rate_plans_supplier_id_id_key") // booking
+  @@map("rate_plans")
+}
+
+model RoomInventory {
+  id             String       @id(map: "room_inventory_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId     String       @db.Uuid @map("supplier_id")
+  roomTypeId     String       @db.Uuid @map("room_type_id")
+  date           DateTime     @db.Date
+  totalUnits     Int          @map("total_units")
+  availableUnits Int          @map("available_units")
+  stopSell       Boolean      @default(false) @map("stop_sell")
+  status         RecordStatus @default(ACTIVE)
+  createdBy      String?      @db.Uuid @map("created_by")
+  updatedBy      String?      @db.Uuid @map("updated_by")
+  createdAt      DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt      DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt      DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier       Supplier     @relation("RoomInventory_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "room_inventory_supplier_id_fkey")
+  roomType       RoomType     @relation("RoomInventory_roomType", fields: [supplierId, roomTypeId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "room_inventory_supplier_id_room_type_id_fkey")
+
+  @@unique([supplierId, roomTypeId, date], map: "room_inventory_supplier_id_room_type_id_date_key")
+  @@index([supplierId, status], map: "room_inventory_supplier_id_status_idx")
+  @@map("room_inventory")
+}
+
+model Trip {
+  id                   String              @id(map: "trips_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId           String              @db.Uuid @map("supplier_id")
+  code                 String              @db.VarChar(40)
+  title                String              @db.VarChar(200)
+  categoryId           String?             @db.Uuid @map("category_id")
+  description          String?
+  durationMinutes      Int                 @map("duration_minutes")
+  meetingPoint         String?             @db.VarChar(255) @map("meeting_point")
+  meetingLatitude      Decimal?            @db.Decimal(9,6) @map("meeting_latitude")
+  meetingLongitude     Decimal?            @db.Decimal(9,6) @map("meeting_longitude")
+  location             String?             @db.VarChar(255)
+  cityId               String?             @db.Uuid @map("city_id")
+  countryCode          String              @db.Char(2) @map("country_code")
+  difficulty           Difficulty          @default(EASY)
+  minParticipants      Int                 @default(1) @map("min_participants")
+  maxParticipants      Int?                @map("max_participants")
+  inclusions           String[]            @default([])
+  exclusions           String[]            @default([])
+  cancellationPolicyId String?             @db.Uuid @map("cancellation_policy_id")
+  status               RecordStatus        @default(ACTIVE)
+  createdBy            String?             @db.Uuid @map("created_by")
+  updatedBy            String?             @db.Uuid @map("updated_by")
+  createdAt            DateTime            @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt            DateTime            @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt            DateTime?           @db.Timestamptz(6) @map("deleted_at")
+  supplier             Supplier            @relation("Trip_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "trips_supplier_id_fkey")
+  category             Category?           @relation("Trip_category", fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "trips_category_id_fkey")
+  city                 City?               @relation("Trip_city", fields: [cityId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "trips_city_id_fkey")
+  country              Country             @relation("Trip_country", fields: [countryCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "trips_country_code_fkey")
+  cancellationPolicy   CancellationPolicy? @relation("Trip_cancellationPolicy", fields: [supplierId, cancellationPolicyId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "trips_supplier_id_cancellation_policy_id_fkey")
+  tripImages           TripImage[]         @relation("TripImage_trip")
+  itinerary            TripItineraryDay[]  @relation("TripItineraryDay_trip")
+  variants             TripVariant[]       @relation("TripVariant_trip")
+  schedules            TripSchedule[]      @relation("TripSchedule_trip")
+  addons               TripAddon[]         @relation("TripAddon_trip")
+
+  tripBookingItems TripBookingItem[] @relation("TripBookingItem_trip") // booking
+  @@unique([supplierId, code], map: "trips_supplier_id_code_key")
+  @@unique([supplierId, id], map: "trips_supplier_id_id_key")
+  @@index([supplierId, status], map: "trips_supplier_id_status_idx")
+  @@index([supplierId, categoryId], map: "trips_supplier_id_category_id_idx")
+  @@index([categoryId], map: "trips_category_id_idx")
+  @@index([cityId], map: "trips_city_id_idx")
+  @@index([countryCode], map: "trips_country_code_idx")
+  @@index([supplierId, cancellationPolicyId], map: "trips_supplier_id_cancellation_policy_id_idx")
+  @@map("trips")
+}
+
+model TripImage {
+  id         String       @id(map: "trip_images_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String       @db.Uuid @map("supplier_id")
+  tripId     String       @db.Uuid @map("trip_id")
+  mediaId    String       @db.Uuid @map("media_id")
+  sortOrder  Int          @default(0) @map("sort_order")
+  caption    String?      @db.VarChar(255)
+  isCover    Boolean      @default(false) @map("is_cover")
+  status     RecordStatus @default(ACTIVE)
+  createdBy  String?      @db.Uuid @map("created_by")
+  updatedBy  String?      @db.Uuid @map("updated_by")
+  createdAt  DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt  DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt  DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier   Supplier     @relation("TripImage_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "trip_images_supplier_id_fkey")
+  trip       Trip         @relation("TripImage_trip", fields: [supplierId, tripId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "trip_images_supplier_id_trip_id_fkey")
+  media      MediaAsset   @relation("TripImage_media", fields: [supplierId, mediaId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "trip_images_supplier_id_media_id_fkey")
+
+  @@unique([tripId, mediaId], map: "trip_images_trip_id_media_id_key")
+  @@index([supplierId, status], map: "trip_images_supplier_id_status_idx")
+  @@index([tripId, sortOrder], map: "trip_images_trip_id_sort_order_idx")
+  @@index([supplierId, tripId], map: "trip_images_supplier_id_trip_id_idx")
+  @@index([supplierId, mediaId], map: "trip_images_supplier_id_media_id_idx")
+  @@map("trip_images")
+}
+
+/// items = [{"time":"09:00","title":"...","description":"..."}]
+model TripItineraryDay {
+  id          String       @id(map: "trip_itinerary_days_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId  String       @db.Uuid @map("supplier_id")
+  tripId      String       @db.Uuid @map("trip_id")
+  dayNumber   Int          @map("day_number")
+  title       String       @db.VarChar(200)
+  description String?
+  items       Json         @default("[]")
+  status      RecordStatus @default(ACTIVE)
+  createdBy   String?      @db.Uuid @map("created_by")
+  updatedBy   String?      @db.Uuid @map("updated_by")
+  createdAt   DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt   DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt   DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier    Supplier     @relation("TripItineraryDay_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "trip_itinerary_days_supplier_id_fkey")
+  trip        Trip         @relation("TripItineraryDay_trip", fields: [supplierId, tripId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "trip_itinerary_days_supplier_id_trip_id_fkey")
+
+  @@unique([supplierId, tripId, dayNumber], map: "trip_itinerary_days_supplier_id_trip_id_day_number_key")
+  @@index([supplierId, status], map: "trip_itinerary_days_supplier_id_status_idx")
+  @@map("trip_itinerary_days")
+}
+
+model TripVariant {
+  id           String       @id(map: "trip_variants_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId   String       @db.Uuid @map("supplier_id")
+  tripId       String       @db.Uuid @map("trip_id")
+  code         String       @db.VarChar(40)
+  name         String       @db.VarChar(150)
+  description  String?
+  adultPrice   Decimal      @db.Decimal(12,2) @map("adult_price")
+  childPrice   Decimal?     @db.Decimal(12,2) @map("child_price")
+  currencyCode String       @db.Char(3) @map("currency_code")
+  minPax       Int          @default(1) @map("min_pax")
+  maxPax       Int?         @map("max_pax")
+  status       RecordStatus @default(ACTIVE)
+  createdBy    String?      @db.Uuid @map("created_by")
+  updatedBy    String?      @db.Uuid @map("updated_by")
+  createdAt    DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt    DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt    DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier     Supplier     @relation("TripVariant_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "trip_variants_supplier_id_fkey")
+  trip         Trip         @relation("TripVariant_trip", fields: [supplierId, tripId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "trip_variants_supplier_id_trip_id_fkey")
+  currency     Currency     @relation("TripVariant_currency", fields: [currencyCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "trip_variants_currency_code_fkey")
+
+  tripBookingItems TripBookingItem[] @relation("TripBookingItem_variant") // booking
+  @@unique([supplierId, tripId, code], map: "trip_variants_supplier_id_trip_id_code_key")
+  @@index([supplierId, status], map: "trip_variants_supplier_id_status_idx")
+  @@index([currencyCode], map: "trip_variants_currency_code_idx")
+  @@unique([supplierId, id], map: "trip_variants_supplier_id_id_key") // booking
+  @@map("trip_variants")
+}
+
+model TripSchedule {
+  id             String       @id(map: "trip_schedules_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId     String       @db.Uuid @map("supplier_id")
+  tripId         String       @db.Uuid @map("trip_id")
+  date           DateTime     @db.Date
+  startTime      String       @db.VarChar(5) @map("start_time")
+  endTime        String?      @db.VarChar(5) @map("end_time")
+  quota          Int
+  remainingQuota Int          @map("remaining_quota")
+  cutoffHours    Int          @default(0) @map("cutoff_hours")
+  status         RecordStatus @default(ACTIVE)
+  createdBy      String?      @db.Uuid @map("created_by")
+  updatedBy      String?      @db.Uuid @map("updated_by")
+  createdAt      DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt      DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt      DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier       Supplier     @relation("TripSchedule_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "trip_schedules_supplier_id_fkey")
+  trip           Trip         @relation("TripSchedule_trip", fields: [supplierId, tripId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "trip_schedules_supplier_id_trip_id_fkey")
+
+  tripBookingItems TripBookingItem[] @relation("TripBookingItem_schedule") // booking
+  @@unique([supplierId, tripId, date, startTime], map: "trip_schedules_supplier_id_trip_id_date_start_time_key")
+  @@index([supplierId, status], map: "trip_schedules_supplier_id_status_idx")
+  @@index([supplierId, date], map: "trip_schedules_supplier_id_date_idx")
+  @@unique([supplierId, id], map: "trip_schedules_supplier_id_id_key") // booking
+  @@map("trip_schedules")
+}
+
+model TripAddon {
+  id           String       @id(map: "trip_addons_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId   String       @db.Uuid @map("supplier_id")
+  tripId       String       @db.Uuid @map("trip_id")
+  code         String       @db.VarChar(40)
+  name         String       @db.VarChar(150)
+  price        Decimal      @db.Decimal(12,2)
+  currencyCode String       @db.Char(3) @map("currency_code")
+  perPerson    Boolean      @default(true) @map("per_person")
+  maxQuantity  Int?         @map("max_quantity")
+  status       RecordStatus @default(ACTIVE)
+  createdBy    String?      @db.Uuid @map("created_by")
+  updatedBy    String?      @db.Uuid @map("updated_by")
+  createdAt    DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt    DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt    DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier     Supplier     @relation("TripAddon_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "trip_addons_supplier_id_fkey")
+  trip         Trip         @relation("TripAddon_trip", fields: [supplierId, tripId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "trip_addons_supplier_id_trip_id_fkey")
+  currency     Currency     @relation("TripAddon_currency", fields: [currencyCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "trip_addons_currency_code_fkey")
+
+  @@unique([supplierId, tripId, code], map: "trip_addons_supplier_id_trip_id_code_key")
+  @@index([supplierId, status], map: "trip_addons_supplier_id_status_idx")
+  @@index([currencyCode], map: "trip_addons_currency_code_idx")
+  @@map("trip_addons")
+}
+
+model VehicleType {
+  id                   String               @id(map: "vehicle_types_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId           String               @db.Uuid @map("supplier_id")
+  code                 String               @db.VarChar(40)
+  name                 String               @db.VarChar(120)
+  kind                 VehicleKind
+  passengerCapacity    Int                  @map("passenger_capacity")
+  luggageCapacity      Int                  @default(0) @map("luggage_capacity")
+  description          String?
+  status               RecordStatus         @default(ACTIVE)
+  createdBy            String?              @db.Uuid @map("created_by")
+  updatedBy            String?              @db.Uuid @map("updated_by")
+  createdAt            DateTime             @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt            DateTime             @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt            DateTime?            @db.Timestamptz(6) @map("deleted_at")
+  supplier             Supplier             @relation("VehicleType_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "vehicle_types_supplier_id_fkey")
+  vehicleTypeAmenities VehicleTypeAmenity[] @relation("VehicleTypeAmenity_vehicleType")
+  vehicleTypeImages    VehicleTypeImage[]   @relation("VehicleTypeImage_vehicleType")
+  transportServices    TransportService[]   @relation("TransportService_vehicleType")
+  zoneRoutePrices      ZoneRoutePrice[]     @relation("ZoneRoutePrice_vehicleType")
+  vehicles             Vehicle[]            @relation("Vehicle_vehicleType")
+
+  transportBookingItems TransportBookingItem[] @relation("TransportBookingItem_vehicleType") // booking
+  @@unique([supplierId, code], map: "vehicle_types_supplier_id_code_key")
+  @@unique([supplierId, id], map: "vehicle_types_supplier_id_id_key")
+  @@index([supplierId, status], map: "vehicle_types_supplier_id_status_idx")
+  @@map("vehicle_types")
+}
+
+/// Vehicle features.
+model VehicleTypeAmenity {
+  id            String       @id(map: "vehicle_type_amenities_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId    String       @db.Uuid @map("supplier_id")
+  vehicleTypeId String       @db.Uuid @map("vehicle_type_id")
+  amenityId     String       @db.Uuid @map("amenity_id")
+  status        RecordStatus @default(ACTIVE)
+  createdBy     String?      @db.Uuid @map("created_by")
+  updatedBy     String?      @db.Uuid @map("updated_by")
+  createdAt     DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt     DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt     DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier      Supplier     @relation("VehicleTypeAmenity_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "vehicle_type_amenities_supplier_id_fkey")
+  vehicleType   VehicleType  @relation("VehicleTypeAmenity_vehicleType", fields: [supplierId, vehicleTypeId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "vehicle_type_amenities_supplier_id_vehicle_type_id_fkey")
+  amenity       Amenity      @relation("VehicleTypeAmenity_amenity", fields: [amenityId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "vehicle_type_amenities_amenity_id_fkey")
+
+  @@unique([vehicleTypeId, amenityId], map: "vehicle_type_amenities_vehicle_type_id_amenity_id_key")
+  @@index([supplierId, status], map: "vehicle_type_amenities_supplier_id_status_idx")
+  @@index([supplierId, vehicleTypeId], map: "vehicle_type_amenities_supplier_id_vehicle_type_id_idx")
+  @@index([amenityId], map: "vehicle_type_amenities_amenity_id_idx")
+  @@map("vehicle_type_amenities")
+}
+
+model VehicleTypeImage {
+  id            String       @id(map: "vehicle_type_images_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId    String       @db.Uuid @map("supplier_id")
+  vehicleTypeId String       @db.Uuid @map("vehicle_type_id")
+  mediaId       String       @db.Uuid @map("media_id")
+  sortOrder     Int          @default(0) @map("sort_order")
+  caption       String?      @db.VarChar(255)
+  isCover       Boolean      @default(false) @map("is_cover")
+  status        RecordStatus @default(ACTIVE)
+  createdBy     String?      @db.Uuid @map("created_by")
+  updatedBy     String?      @db.Uuid @map("updated_by")
+  createdAt     DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt     DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt     DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier      Supplier     @relation("VehicleTypeImage_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "vehicle_type_images_supplier_id_fkey")
+  vehicleType   VehicleType  @relation("VehicleTypeImage_vehicleType", fields: [supplierId, vehicleTypeId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "vehicle_type_images_supplier_id_vehicle_type_id_fkey")
+  media         MediaAsset   @relation("VehicleTypeImage_media", fields: [supplierId, mediaId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "vehicle_type_images_supplier_id_media_id_fkey")
+
+  @@unique([vehicleTypeId, mediaId], map: "vehicle_type_images_vehicle_type_id_media_id_key")
+  @@index([supplierId, status], map: "vehicle_type_images_supplier_id_status_idx")
+  @@index([vehicleTypeId, sortOrder], map: "vehicle_type_images_vehicle_type_id_sort_order_idx")
+  @@index([supplierId, vehicleTypeId], map: "vehicle_type_images_supplier_id_vehicle_type_id_idx")
+  @@index([supplierId, mediaId], map: "vehicle_type_images_supplier_id_media_id_idx")
+  @@map("vehicle_type_images")
+}
+
+model TransportZone {
+  id                  String             @id(map: "transport_zones_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId          String             @db.Uuid @map("supplier_id")
+  code                String             @db.VarChar(40)
+  name                String             @db.VarChar(150)
+  cityId              String?            @db.Uuid @map("city_id")
+  countryCode         String             @db.Char(2) @map("country_code")
+  description         String?
+  latitude            Decimal?           @db.Decimal(9,6)
+  longitude           Decimal?           @db.Decimal(9,6)
+  status              RecordStatus       @default(ACTIVE)
+  createdBy           String?            @db.Uuid @map("created_by")
+  updatedBy           String?            @db.Uuid @map("updated_by")
+  createdAt           DateTime           @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt           DateTime           @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt           DateTime?          @db.Timestamptz(6) @map("deleted_at")
+  supplier            Supplier           @relation("TransportZone_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "transport_zones_supplier_id_fkey")
+  city                City?              @relation("TransportZone_city", fields: [cityId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "transport_zones_city_id_fkey")
+  country             Country            @relation("TransportZone_country", fields: [countryCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "transport_zones_country_code_fkey")
+  originServices      TransportService[] @relation("TransportService_origin")
+  destinationServices TransportService[] @relation("TransportService_destination")
+  routesFrom          ZoneRoutePrice[]   @relation("ZoneRoutePrice_from")
+  routesTo            ZoneRoutePrice[]   @relation("ZoneRoutePrice_to")
+
+  transportBookingItemsOriginZone TransportBookingItem[] @relation("TransportBookingItem_originZone") // booking
+  transportBookingItemsDestinationZone TransportBookingItem[] @relation("TransportBookingItem_destinationZone") // booking
+  @@unique([supplierId, code], map: "transport_zones_supplier_id_code_key")
+  @@unique([supplierId, id], map: "transport_zones_supplier_id_id_key")
+  @@index([supplierId, status], map: "transport_zones_supplier_id_status_idx")
+  @@index([cityId], map: "transport_zones_city_id_idx")
+  @@index([countryCode], map: "transport_zones_country_code_idx")
+  @@map("transport_zones")
+}
+
+model TransportService {
+  id                   String               @id(map: "transport_services_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId           String               @db.Uuid @map("supplier_id")
+  code                 String               @db.VarChar(40)
+  name                 String               @db.VarChar(200)
+  serviceType          TransportServiceType @map("service_type")
+  originZoneId         String?              @db.Uuid @map("origin_zone_id")
+  destinationZoneId    String?              @db.Uuid @map("destination_zone_id")
+  originLabel          String?              @db.VarChar(200) @map("origin_label")
+  destinationLabel     String?              @db.VarChar(200) @map("destination_label")
+  vehicleTypeId        String               @db.Uuid @map("vehicle_type_id")
+  price                Decimal              @db.Decimal(12,2)
+  currencyCode         String               @db.Char(3) @map("currency_code")
+  durationMinutes      Int?                 @map("duration_minutes")
+  driverIncluded       Boolean              @default(true) @map("driver_included")
+  description          String?
+  cancellationPolicyId String?              @db.Uuid @map("cancellation_policy_id")
+  status               RecordStatus         @default(ACTIVE)
+  createdBy            String?              @db.Uuid @map("created_by")
+  updatedBy            String?              @db.Uuid @map("updated_by")
+  createdAt            DateTime             @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt            DateTime             @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt            DateTime?            @db.Timestamptz(6) @map("deleted_at")
+  supplier             Supplier             @relation("TransportService_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "transport_services_supplier_id_fkey")
+  originZone           TransportZone?       @relation("TransportService_origin", fields: [supplierId, originZoneId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "transport_services_supplier_id_origin_zone_id_fkey")
+  destinationZone      TransportZone?       @relation("TransportService_destination", fields: [supplierId, destinationZoneId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "transport_services_supplier_id_destination_zone_id_fkey")
+  vehicleType          VehicleType          @relation("TransportService_vehicleType", fields: [supplierId, vehicleTypeId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "transport_services_supplier_id_vehicle_type_id_fkey")
+  currency             Currency             @relation("TransportService_currency", fields: [currencyCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "transport_services_currency_code_fkey")
+  cancellationPolicy   CancellationPolicy?  @relation("TransportService_cancellationPolicy", fields: [supplierId, cancellationPolicyId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "transport_services_supplier_id_cancellation_policy_id_fkey")
+
+  transportBookingItems TransportBookingItem[] @relation("TransportBookingItem_service") // booking
+  @@unique([supplierId, code], map: "transport_services_supplier_id_code_key")
+  @@index([supplierId, status], map: "transport_services_supplier_id_status_idx")
+  @@index([supplierId, serviceType], map: "transport_services_supplier_id_service_type_idx")
+  @@index([supplierId, originZoneId], map: "transport_services_supplier_id_origin_zone_id_idx")
+  @@index([supplierId, destinationZoneId], map: "transport_services_supplier_id_destination_zone_id_idx")
+  @@index([supplierId, vehicleTypeId], map: "transport_services_supplier_id_vehicle_type_id_idx")
+  @@index([currencyCode], map: "transport_services_currency_code_idx")
+  @@index([supplierId, cancellationPolicyId], map: "transport_services_supplier_id_cancellation_policy_id_idx")
+  @@unique([supplierId, id], map: "transport_services_supplier_id_id_key") // booking
+  @@map("transport_services")
+}
+
+model ZoneRoutePrice {
+  id              String        @id(map: "zone_route_prices_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId      String        @db.Uuid @map("supplier_id")
+  fromZoneId      String        @db.Uuid @map("from_zone_id")
+  toZoneId        String        @db.Uuid @map("to_zone_id")
+  vehicleTypeId   String        @db.Uuid @map("vehicle_type_id")
+  price           Decimal       @db.Decimal(12,2)
+  currencyCode    String        @db.Char(3) @map("currency_code")
+  durationMinutes Int?          @map("duration_minutes")
+  status          RecordStatus  @default(ACTIVE)
+  createdBy       String?       @db.Uuid @map("created_by")
+  updatedBy       String?       @db.Uuid @map("updated_by")
+  createdAt       DateTime      @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt       DateTime      @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt       DateTime?     @db.Timestamptz(6) @map("deleted_at")
+  supplier        Supplier      @relation("ZoneRoutePrice_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "zone_route_prices_supplier_id_fkey")
+  fromZone        TransportZone @relation("ZoneRoutePrice_from", fields: [supplierId, fromZoneId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "zone_route_prices_supplier_id_from_zone_id_fkey")
+  toZone          TransportZone @relation("ZoneRoutePrice_to", fields: [supplierId, toZoneId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "zone_route_prices_supplier_id_to_zone_id_fkey")
+  vehicleType     VehicleType   @relation("ZoneRoutePrice_vehicleType", fields: [supplierId, vehicleTypeId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "zone_route_prices_supplier_id_vehicle_type_id_fkey")
+  currency        Currency      @relation("ZoneRoutePrice_currency", fields: [currencyCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "zone_route_prices_currency_code_fkey")
+
+  @@unique([supplierId, fromZoneId, toZoneId, vehicleTypeId], map: "zone_route_prices_supplier_id_from_zone_id_to_zone_id__04777248")
+  @@index([supplierId, status], map: "zone_route_prices_supplier_id_status_idx")
+  @@index([supplierId, toZoneId], map: "zone_route_prices_supplier_id_to_zone_id_idx")
+  @@index([supplierId, vehicleTypeId], map: "zone_route_prices_supplier_id_vehicle_type_id_idx")
+  @@index([currencyCode], map: "zone_route_prices_currency_code_idx")
+  @@map("zone_route_prices")
+}
+
+model Driver {
+  id            String       @id(map: "drivers_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId    String       @db.Uuid @map("supplier_id")
+  code          String       @db.VarChar(40)
+  name          String       @db.VarChar(150)
+  phone         String       @db.VarChar(40)
+  email         String?      @db.VarChar(254)
+  licenseNumber String       @db.VarChar(60) @map("license_number")
+  licenseExpiry DateTime?    @db.Date @map("license_expiry")
+  status        RecordStatus @default(ACTIVE)
+  createdBy     String?      @db.Uuid @map("created_by")
+  updatedBy     String?      @db.Uuid @map("updated_by")
+  createdAt     DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt     DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt     DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier      Supplier     @relation("Driver_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "drivers_supplier_id_fkey")
+  vehicles      Vehicle[]    @relation("Vehicle_driver")
+
+  transportBookingItems TransportBookingItem[] @relation("TransportBookingItem_driver") // booking
+  @@unique([supplierId, code], map: "drivers_supplier_id_code_key")
+  @@unique([supplierId, id], map: "drivers_supplier_id_id_key")
+  @@index([supplierId, status], map: "drivers_supplier_id_status_idx")
+  @@map("drivers")
+}
+
+model Vehicle {
+  id              String       @id(map: "vehicles_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId      String       @db.Uuid @map("supplier_id")
+  vehicleTypeId   String       @db.Uuid @map("vehicle_type_id")
+  plateNumber     String       @db.VarChar(20) @map("plate_number")
+  make            String?      @db.VarChar(60)
+  model           String?      @db.VarChar(60)
+  year            Int?
+  color           String?      @db.VarChar(40)
+  driverId        String?      @db.Uuid @map("driver_id")
+  insuranceExpiry DateTime?    @db.Date @map("insurance_expiry")
+  status          RecordStatus @default(ACTIVE)
+  createdBy       String?      @db.Uuid @map("created_by")
+  updatedBy       String?      @db.Uuid @map("updated_by")
+  createdAt       DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt       DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt       DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier        Supplier     @relation("Vehicle_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "vehicles_supplier_id_fkey")
+  vehicleType     VehicleType  @relation("Vehicle_vehicleType", fields: [supplierId, vehicleTypeId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "vehicles_supplier_id_vehicle_type_id_fkey")
+  driver          Driver?      @relation("Vehicle_driver", fields: [supplierId, driverId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "vehicles_supplier_id_driver_id_fkey")
+
+  transportBookingItems TransportBookingItem[] @relation("TransportBookingItem_vehicle") // booking
+  @@unique([supplierId, plateNumber], map: "vehicles_supplier_id_plate_number_key")
+  @@index([supplierId, status], map: "vehicles_supplier_id_status_idx")
+  @@index([supplierId, vehicleTypeId], map: "vehicles_supplier_id_vehicle_type_id_idx")
+  @@index([supplierId, driverId], map: "vehicles_supplier_id_driver_id_idx")
+  @@unique([supplierId, id], map: "vehicles_supplier_id_id_key") // booking
+  @@map("vehicles")
+}
+
+model Club {
+  id            String             @id(map: "clubs_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId    String             @db.Uuid @map("supplier_id")
+  code          String             @db.VarChar(40)
+  name          String             @db.VarChar(200)
+  venueKind     VenueKind          @default(NIGHTCLUB) @map("venue_kind")
+  categoryId    String?            @db.Uuid @map("category_id")
+  description   String?
+  address       String?
+  cityId        String?            @db.Uuid @map("city_id")
+  countryCode   String             @db.Char(2) @map("country_code")
+  latitude      Decimal?           @db.Decimal(9,6)
+  longitude     Decimal?           @db.Decimal(9,6)
+  phone         String?            @db.VarChar(40)
+  email         String?            @db.VarChar(254)
+  dressCode     String?            @db.VarChar(255) @map("dress_code")
+  minimumAge    Int                @default(18) @map("minimum_age")
+  status        RecordStatus       @default(ACTIVE)
+  createdBy     String?            @db.Uuid @map("created_by")
+  updatedBy     String?            @db.Uuid @map("updated_by")
+  createdAt     DateTime           @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt     DateTime           @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt     DateTime?          @db.Timestamptz(6) @map("deleted_at")
+  supplier      Supplier           @relation("Club_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "clubs_supplier_id_fkey")
+  category      Category?          @relation("Club_category", fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "clubs_category_id_fkey")
+  city          City?              @relation("Club_city", fields: [cityId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "clubs_city_id_fkey")
+  country       Country            @relation("Club_country", fields: [countryCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "clubs_country_code_fkey")
+  openingHours  ClubOpeningHour[]  @relation("ClubOpeningHour_club")
+  clubAmenities ClubAmenity[]      @relation("ClubAmenity_club")
+  clubImages    ClubImage[]        @relation("ClubImage_club")
+  ticketTypes   ClubTicketType[]   @relation("ClubTicketType_club")
+  tablePackages ClubTablePackage[] @relation("ClubTablePackage_club")
+  events        ClubEvent[]        @relation("ClubEvent_club")
+
+  clubBookingItems ClubBookingItem[] @relation("ClubBookingItem_club") // booking
+  @@unique([supplierId, code], map: "clubs_supplier_id_code_key")
+  @@unique([supplierId, id], map: "clubs_supplier_id_id_key")
+  @@index([supplierId, status], map: "clubs_supplier_id_status_idx")
+  @@index([categoryId], map: "clubs_category_id_idx")
+  @@index([cityId], map: "clubs_city_id_idx")
+  @@index([countryCode], map: "clubs_country_code_idx")
+  @@map("clubs")
+}
+
+/// weekday: 0 = Sunday ... 6 = Saturday. A closing time earlier than the opening time means it closes after midnight.
+model ClubOpeningHour {
+  id         String       @id(map: "club_opening_hours_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String       @db.Uuid @map("supplier_id")
+  clubId     String       @db.Uuid @map("club_id")
+  weekday    Int
+  opensAt    String?      @db.VarChar(5) @map("opens_at")
+  closesAt   String?      @db.VarChar(5) @map("closes_at")
+  isClosed   Boolean      @default(false) @map("is_closed")
+  status     RecordStatus @default(ACTIVE)
+  createdBy  String?      @db.Uuid @map("created_by")
+  updatedBy  String?      @db.Uuid @map("updated_by")
+  createdAt  DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt  DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt  DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier   Supplier     @relation("ClubOpeningHour_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "club_opening_hours_supplier_id_fkey")
+  club       Club         @relation("ClubOpeningHour_club", fields: [supplierId, clubId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "club_opening_hours_supplier_id_club_id_fkey")
+
+  @@unique([supplierId, clubId, weekday], map: "club_opening_hours_supplier_id_club_id_weekday_key")
+  @@index([supplierId, status], map: "club_opening_hours_supplier_id_status_idx")
+  @@map("club_opening_hours")
+}
+
+model ClubAmenity {
+  id         String       @id(map: "club_amenities_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String       @db.Uuid @map("supplier_id")
+  clubId     String       @db.Uuid @map("club_id")
+  amenityId  String       @db.Uuid @map("amenity_id")
+  status     RecordStatus @default(ACTIVE)
+  createdBy  String?      @db.Uuid @map("created_by")
+  updatedBy  String?      @db.Uuid @map("updated_by")
+  createdAt  DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt  DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt  DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier   Supplier     @relation("ClubAmenity_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "club_amenities_supplier_id_fkey")
+  club       Club         @relation("ClubAmenity_club", fields: [supplierId, clubId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "club_amenities_supplier_id_club_id_fkey")
+  amenity    Amenity      @relation("ClubAmenity_amenity", fields: [amenityId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "club_amenities_amenity_id_fkey")
+
+  @@unique([clubId, amenityId], map: "club_amenities_club_id_amenity_id_key")
+  @@index([supplierId, status], map: "club_amenities_supplier_id_status_idx")
+  @@index([supplierId, clubId], map: "club_amenities_supplier_id_club_id_idx")
+  @@index([amenityId], map: "club_amenities_amenity_id_idx")
+  @@map("club_amenities")
+}
+
+model ClubImage {
+  id         String       @id(map: "club_images_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String       @db.Uuid @map("supplier_id")
+  clubId     String       @db.Uuid @map("club_id")
+  mediaId    String       @db.Uuid @map("media_id")
+  sortOrder  Int          @default(0) @map("sort_order")
+  caption    String?      @db.VarChar(255)
+  isCover    Boolean      @default(false) @map("is_cover")
+  status     RecordStatus @default(ACTIVE)
+  createdBy  String?      @db.Uuid @map("created_by")
+  updatedBy  String?      @db.Uuid @map("updated_by")
+  createdAt  DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt  DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt  DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier   Supplier     @relation("ClubImage_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "club_images_supplier_id_fkey")
+  club       Club         @relation("ClubImage_club", fields: [supplierId, clubId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "club_images_supplier_id_club_id_fkey")
+  media      MediaAsset   @relation("ClubImage_media", fields: [supplierId, mediaId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "club_images_supplier_id_media_id_fkey")
+
+  @@unique([clubId, mediaId], map: "club_images_club_id_media_id_key")
+  @@index([supplierId, status], map: "club_images_supplier_id_status_idx")
+  @@index([clubId, sortOrder], map: "club_images_club_id_sort_order_idx")
+  @@index([supplierId, clubId], map: "club_images_supplier_id_club_id_idx")
+  @@index([supplierId, mediaId], map: "club_images_supplier_id_media_id_idx")
+  @@map("club_images")
+}
+
+model ClubTicketType {
+  id           String       @id(map: "club_ticket_types_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId   String       @db.Uuid @map("supplier_id")
+  clubId       String       @db.Uuid @map("club_id")
+  code         String       @db.VarChar(40)
+  name         String       @db.VarChar(150)
+  description  String?
+  price        Decimal      @db.Decimal(12,2)
+  currencyCode String       @db.Char(3) @map("currency_code")
+  inclusions   String[]     @default([])
+  quota        Int?
+  status       RecordStatus @default(ACTIVE)
+  createdBy    String?      @db.Uuid @map("created_by")
+  updatedBy    String?      @db.Uuid @map("updated_by")
+  createdAt    DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt    DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt    DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier     Supplier     @relation("ClubTicketType_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "club_ticket_types_supplier_id_fkey")
+  club         Club         @relation("ClubTicketType_club", fields: [supplierId, clubId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "club_ticket_types_supplier_id_club_id_fkey")
+  currency     Currency     @relation("ClubTicketType_currency", fields: [currencyCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "club_ticket_types_currency_code_fkey")
+
+  clubBookingItems ClubBookingItem[] @relation("ClubBookingItem_ticketType") // booking
+  @@unique([supplierId, clubId, code], map: "club_ticket_types_supplier_id_club_id_code_key")
+  @@index([supplierId, status], map: "club_ticket_types_supplier_id_status_idx")
+  @@index([currencyCode], map: "club_ticket_types_currency_code_idx")
+  @@unique([supplierId, id], map: "club_ticket_types_supplier_id_id_key") // booking
+  @@map("club_ticket_types")
+}
+
+model ClubTablePackage {
+  id           String       @id(map: "club_table_packages_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId   String       @db.Uuid @map("supplier_id")
+  clubId       String       @db.Uuid @map("club_id")
+  code         String       @db.VarChar(40)
+  name         String       @db.VarChar(150)
+  capacity     Int
+  minimumSpend Decimal      @db.Decimal(12,2) @map("minimum_spend")
+  price        Decimal      @db.Decimal(12,2)
+  currencyCode String       @db.Char(3) @map("currency_code")
+  inclusions   String[]     @default([])
+  quota        Int?
+  status       RecordStatus @default(ACTIVE)
+  createdBy    String?      @db.Uuid @map("created_by")
+  updatedBy    String?      @db.Uuid @map("updated_by")
+  createdAt    DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt    DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt    DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier     Supplier     @relation("ClubTablePackage_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "club_table_packages_supplier_id_fkey")
+  club         Club         @relation("ClubTablePackage_club", fields: [supplierId, clubId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "club_table_packages_supplier_id_club_id_fkey")
+  currency     Currency     @relation("ClubTablePackage_currency", fields: [currencyCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "club_table_packages_currency_code_fkey")
+
+  clubBookingItems ClubBookingItem[] @relation("ClubBookingItem_tablePackage") // booking
+  @@unique([supplierId, clubId, code], map: "club_table_packages_supplier_id_club_id_code_key")
+  @@index([supplierId, status], map: "club_table_packages_supplier_id_status_idx")
+  @@index([currencyCode], map: "club_table_packages_currency_code_idx")
+  @@unique([supplierId, id], map: "club_table_packages_supplier_id_id_key") // booking
+  @@map("club_table_packages")
+}
+
+model ClubEvent {
+  id           String       @id(map: "club_events_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId   String       @db.Uuid @map("supplier_id")
+  clubId       String       @db.Uuid @map("club_id")
+  code         String       @db.VarChar(40)
+  title        String       @db.VarChar(200)
+  eventDate    DateTime     @db.Date @map("event_date")
+  startTime    String?      @db.VarChar(5) @map("start_time")
+  endTime      String?      @db.VarChar(5) @map("end_time")
+  lineup       String[]     @default([])
+  description  String?
+  specialPrice Decimal?     @db.Decimal(12,2) @map("special_price")
+  currencyCode String?      @db.Char(3) @map("currency_code")
+  quota        Int?
+  status       RecordStatus @default(ACTIVE)
+  createdBy    String?      @db.Uuid @map("created_by")
+  updatedBy    String?      @db.Uuid @map("updated_by")
+  createdAt    DateTime     @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt    DateTime     @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt    DateTime?    @db.Timestamptz(6) @map("deleted_at")
+  supplier     Supplier     @relation("ClubEvent_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "club_events_supplier_id_fkey")
+  club         Club         @relation("ClubEvent_club", fields: [supplierId, clubId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "club_events_supplier_id_club_id_fkey")
+  currency     Currency?    @relation("ClubEvent_currency", fields: [currencyCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "club_events_currency_code_fkey")
+
+  clubBookingItems ClubBookingItem[] @relation("ClubBookingItem_event") // booking
+  @@unique([supplierId, clubId, code], map: "club_events_supplier_id_club_id_code_key")
+  @@index([supplierId, status], map: "club_events_supplier_id_status_idx")
+  @@index([supplierId, clubId, eventDate], map: "club_events_supplier_id_club_id_event_date_idx")
+  @@index([currencyCode], map: "club_events_currency_code_idx")
+  @@unique([supplierId, id], map: "club_events_supplier_id_id_key") // booking
+  @@map("club_events")
+}
+
+// ==== BOOKINGS (generated by tools/model-gen/bookings.py) ====
+
+enum BookingProduct {
+  HOTEL
+  TRIP
+  TRANSPORT
+  CLUB
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+  EXPIRED
+}
+
+enum BookingSource {
+  ADMIN
+  WEBSITE
+  OTA
+  CONCIERGE
+  PHONE
+  WALK_IN
+}
+
+enum BookingPaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum BookingLineType {
+  BASE
+  ADDON
+  EXTRA
+  TAX
+  SERVICE_CHARGE
+  DISCOUNT
+}
+
+enum GuestType {
+  ADULT
+  CHILD
+  INFANT
+}
+
+enum PaymentKind {
+  PAYMENT
+  REFUND
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CARD
+  E_WALLET
+  QRIS
+  ROOM_CHARGE
+  OTHER
+}
+
+enum PaymentTxStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  VOIDED
+}
+
+enum AssignmentStatus {
+  UNASSIGNED
+  ASSIGNED
+  ON_THE_WAY
+  PICKED_UP
+  DROPPED_OFF
+}
+
+enum BookingEventType {
+  CREATED
+  STATUS_CHANGED
+  NOTE
+  PAYMENT
+  REFUND
+  ASSIGNMENT
+  CHECK_IN
+  CHECK_OUT
+  EDITED
+  NOTIFICATION
+}
+
+model Customer {
+  id          String         @id(map: "customers_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId  String         @db.Uuid @map("supplier_id")
+  fullName    String         @db.VarChar(150) @map("full_name")
+  email       String?        @db.VarChar(254)
+  phone       String?        @db.VarChar(40)
+  countryCode String?        @db.Char(2) @map("country_code")
+  notes       String?        
+  status      RecordStatus   @default(ACTIVE)
+  createdBy   String?        @db.Uuid @map("created_by")
+  updatedBy   String?        @db.Uuid @map("updated_by")
+  createdAt   DateTime       @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt   DateTime       @db.Timestamptz(6) @default(now()) @updatedAt @map("updated_at")
+  deletedAt   DateTime?      @db.Timestamptz(6) @map("deleted_at")
+  supplier Supplier @relation("Customer_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "customers_supplier_id_fkey")
+  bookings Booking[] @relation("Booking_customer")
+  @@unique([supplierId, id], map: "customers_supplier_id_id_key")
+  @@index([supplierId, email], map: "customers_supplier_id_email_idx")
+  @@index([supplierId, fullName], map: "customers_supplier_id_full_name_idx")
+  @@map("customers")
+}
+
+model BookingSequence {
+  id         String         @id(map: "booking_sequences_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String         @db.Uuid @map("supplier_id")
+  product    BookingProduct 
+  period     String         @db.VarChar(6)
+  lastValue  Int            @default(0) @map("last_value")
+  createdBy  String?        @db.Uuid @map("created_by")
+  updatedBy  String?        @db.Uuid @map("updated_by")
+  createdAt  DateTime       @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt  DateTime       @db.Timestamptz(6) @default(now()) @updatedAt @map("updated_at")
+  supplier Supplier @relation("BookingSequence_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "booking_sequences_supplier_id_fkey")
+  @@unique([supplierId, product, period], map: "booking_sequences_supplier_id_product_period_key")
+  @@map("booking_sequences")
+}
+
+model Booking {
+  id                   String         @id(map: "bookings_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId           String         @db.Uuid @map("supplier_id")
+  bookingNo            String         @db.VarChar(30) @map("booking_no")
+  product              BookingProduct 
+  status               BookingStatus  @default(PENDING)
+  source               BookingSource  @default(ADMIN)
+  customerId           String?        @db.Uuid @map("customer_id")
+  guestName            String         @db.VarChar(150) @map("guest_name")
+  guestEmail           String?        @db.VarChar(254) @map("guest_email")
+  guestPhone           String?        @db.VarChar(40) @map("guest_phone")
+  guestCountryCode     String?        @db.Char(2) @map("guest_country_code")
+  currencyCode         String         @db.Char(3) @map("currency_code")
+  subtotal             Decimal        @db.Decimal(14,2) @default(0)
+  taxAmount            Decimal        @db.Decimal(14,2) @default(0) @map("tax_amount")
+  serviceCharge        Decimal        @db.Decimal(14,2) @default(0) @map("service_charge")
+  discountAmount       Decimal        @db.Decimal(14,2) @default(0) @map("discount_amount")
+  totalAmount          Decimal        @db.Decimal(14,2) @default(0) @map("total_amount")
+  paidAmount           Decimal        @db.Decimal(14,2) @default(0) @map("paid_amount")
+  paymentStatus        BookingPaymentStatus @default(UNPAID) @map("payment_status")
+  commissionPct        Decimal        @db.Decimal(5,2) @default(0) @map("commission_pct")
+  commissionAmount     Decimal        @db.Decimal(14,2) @default(0) @map("commission_amount")
+  startAt              DateTime       @db.Timestamptz(6) @map("start_at")
+  endAt                DateTime?      @db.Timestamptz(6) @map("end_at")
+  holdExpiresAt        DateTime?      @db.Timestamptz(6) @map("hold_expires_at")
+  cancellationPolicyId String?        @db.Uuid @map("cancellation_policy_id")
+  confirmedAt          DateTime?      @db.Timestamptz(6) @map("confirmed_at")
+  cancelledAt          DateTime?      @db.Timestamptz(6) @map("cancelled_at")
+  cancelReason         String?        @map("cancel_reason")
+  cancelledBy          String?        @db.Uuid @map("cancelled_by")
+  completedAt          DateTime?      @db.Timestamptz(6) @map("completed_at")
+  specialRequests      String?        @map("special_requests")
+  roomNumber           String?        @map("room_number") @db.VarChar(20)
+  internalNotes        String?        @map("internal_notes")
+  externalRef          String?        @db.VarChar(80) @map("external_ref")
+  createdBy            String?        @db.Uuid @map("created_by")
+  updatedBy            String?        @db.Uuid @map("updated_by")
+  createdAt            DateTime       @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt            DateTime       @db.Timestamptz(6) @default(now()) @updatedAt @map("updated_at")
+  deletedAt            DateTime?      @db.Timestamptz(6) @map("deleted_at")
+  supplier Supplier @relation("Booking_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "bookings_supplier_id_fkey")
+  customer Customer? @relation("Booking_customer", fields: [supplierId, customerId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "bookings_supplier_id_customer_id_fkey")
+  cancellationPolicy CancellationPolicy? @relation("Booking_cancellationPolicy", fields: [supplierId, cancellationPolicyId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "bookings_supplier_id_cancellation_policy_id_fkey")
+  currency Currency @relation("Booking_currency", fields: [currencyCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "bookings_currency_code_fkey")
+  bookingLines BookingLine[] @relation("BookingLine_booking")
+  bookingGuests BookingGuest[] @relation("BookingGuest_booking")
+  hotelBookingItems HotelBookingItem[] @relation("HotelBookingItem_booking")
+  tripBookingItems TripBookingItem[] @relation("TripBookingItem_booking")
+  transportBookingItems TransportBookingItem[] @relation("TransportBookingItem_booking")
+  clubBookingItems ClubBookingItem[] @relation("ClubBookingItem_booking")
+  payments Payment[] @relation("Payment_booking")
+  bookingEvents BookingEvent[] @relation("BookingEvent_booking")
+  @@unique([supplierId, bookingNo], map: "bookings_supplier_id_booking_no_key")
+  @@unique([supplierId, id], map: "bookings_supplier_id_id_key")
+  @@index([supplierId, product, status], map: "bookings_supplier_id_product_status_idx")
+  @@index([supplierId, startAt], map: "bookings_supplier_id_start_at_idx")
+  @@index([supplierId, createdAt], map: "bookings_supplier_id_created_at_idx")
+  @@index([supplierId, paymentStatus], map: "bookings_supplier_id_payment_status_idx")
+  @@index([customerId], map: "bookings_customer_id_idx")
+  @@index([guestEmail], map: "bookings_guest_email_idx")
+  emailOutbox EmailOutbox[] @relation("EmailOutbox_booking")
+  @@map("bookings")
+}
+
+model BookingLine {
+  id          String         @id(map: "booking_lines_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId  String         @db.Uuid @map("supplier_id")
+  bookingId   String         @db.Uuid @map("booking_id")
+  lineType    BookingLineType @default(BASE) @map("line_type")
+  description String         @db.VarChar(300)
+  quantity    Decimal        @db.Decimal(10,2) @default(1)
+  unitPrice   Decimal        @db.Decimal(14,2) @map("unit_price")
+  amount      Decimal        @db.Decimal(14,2)
+  refType     String?        @db.VarChar(30) @map("ref_type")
+  refId       String?        @db.Uuid @map("ref_id")
+  sortOrder   Int            @default(0) @map("sort_order")
+  createdBy   String?        @db.Uuid @map("created_by")
+  updatedBy   String?        @db.Uuid @map("updated_by")
+  createdAt   DateTime       @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt   DateTime       @db.Timestamptz(6) @default(now()) @updatedAt @map("updated_at")
+  supplier Supplier @relation("BookingLine_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "booking_lines_supplier_id_fkey")
+  booking Booking @relation("BookingLine_booking", fields: [supplierId, bookingId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "booking_lines_supplier_id_booking_id_fkey")
+  @@index([supplierId, bookingId], map: "booking_lines_supplier_id_booking_id_idx")
+  @@map("booking_lines")
+}
+
+model BookingGuest {
+  id         String         @id(map: "booking_guests_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String         @db.Uuid @map("supplier_id")
+  bookingId  String         @db.Uuid @map("booking_id")
+  fullName   String         @db.VarChar(150) @map("full_name")
+  guestType  GuestType      @default(ADULT) @map("guest_type")
+  age        Int?           @db.SmallInt
+  isLead     Boolean        @default(false) @map("is_lead")
+  documentNo String?        @db.VarChar(60) @map("document_no")
+  notes      String?        
+  createdBy  String?        @db.Uuid @map("created_by")
+  updatedBy  String?        @db.Uuid @map("updated_by")
+  createdAt  DateTime       @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt  DateTime       @db.Timestamptz(6) @default(now()) @updatedAt @map("updated_at")
+  supplier Supplier @relation("BookingGuest_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "booking_guests_supplier_id_fkey")
+  booking Booking @relation("BookingGuest_booking", fields: [supplierId, bookingId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "booking_guests_supplier_id_booking_id_fkey")
+  @@index([supplierId, bookingId], map: "booking_guests_supplier_id_booking_id_idx")
+  @@map("booking_guests")
+}
+
+model HotelBookingItem {
+  id            String         @id(map: "hotel_booking_items_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId    String         @db.Uuid @map("supplier_id")
+  bookingId     String         @db.Uuid @map("booking_id")
+  hotelId       String         @db.Uuid @map("hotel_id")
+  roomTypeId    String         @db.Uuid @map("room_type_id")
+  ratePlanId    String?        @db.Uuid @map("rate_plan_id")
+  checkIn       DateTime       @db.Date @map("check_in")
+  checkOut      DateTime       @db.Date @map("check_out")
+  nights        Int            
+  rooms         Int            @default(1)
+  adults        Int            @default(1)
+  children      Int            @default(0)
+  mealPlan      MealPlan       @default(ROOM_ONLY) @map("meal_plan")
+  nightlyRates  Json           @default("[]") @map("nightly_rates")
+  amount        Decimal        @db.Decimal(14,2)
+  roomNumber    String?        @db.VarChar(20) @map("room_number")
+  bedPreference String?        @db.VarChar(60) @map("bed_preference")
+  checkedInAt   DateTime?      @db.Timestamptz(6) @map("checked_in_at")
+  checkedOutAt  DateTime?      @db.Timestamptz(6) @map("checked_out_at")
+  createdBy     String?        @db.Uuid @map("created_by")
+  updatedBy     String?        @db.Uuid @map("updated_by")
+  createdAt     DateTime       @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt     DateTime       @db.Timestamptz(6) @default(now()) @updatedAt @map("updated_at")
+  supplier Supplier @relation("HotelBookingItem_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "hotel_booking_items_supplier_id_fkey")
+  booking Booking @relation("HotelBookingItem_booking", fields: [supplierId, bookingId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "hotel_booking_items_supplier_id_booking_id_fkey")
+  hotel Hotel @relation("HotelBookingItem_hotel", fields: [supplierId, hotelId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "hotel_booking_items_supplier_id_hotel_id_fkey")
+  roomType RoomType @relation("HotelBookingItem_roomType", fields: [supplierId, roomTypeId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "hotel_booking_items_supplier_id_room_type_id_fkey")
+  ratePlan RatePlan? @relation("HotelBookingItem_ratePlan", fields: [supplierId, ratePlanId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "hotel_booking_items_supplier_id_rate_plan_id_fkey")
+  @@index([supplierId, bookingId], map: "hotel_booking_items_supplier_id_booking_id_idx")
+  @@index([supplierId, hotelId, checkIn], map: "hotel_booking_items_supplier_id_hotel_id_check_in_idx")
+  @@index([supplierId, roomTypeId, checkIn], map: "hotel_booking_items_supplier_id_room_type_id_check_in_idx")
+  @@map("hotel_booking_items")
+}
+
+model TripBookingItem {
+  id                String         @id(map: "trip_booking_items_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId        String         @db.Uuid @map("supplier_id")
+  bookingId         String         @db.Uuid @map("booking_id")
+  tripId            String         @db.Uuid @map("trip_id")
+  variantId         String?        @db.Uuid @map("variant_id")
+  scheduleId        String         @db.Uuid @map("schedule_id")
+  adults            Int            @default(1)
+  children          Int            @default(0)
+  adultPrice        Decimal        @db.Decimal(14,2) @map("adult_price")
+  childPrice        Decimal        @db.Decimal(14,2) @default(0) @map("child_price")
+  amount            Decimal        @db.Decimal(14,2)
+  pickupAddress     String?        @map("pickup_address")
+  pickupNotes       String?        @map("pickup_notes")
+  checkedInAt       DateTime?      @db.Timestamptz(6) @map("checked_in_at")
+  participantsShown Int?           @map("participants_shown")
+  createdBy         String?        @db.Uuid @map("created_by")
+  updatedBy         String?        @db.Uuid @map("updated_by")
+  createdAt         DateTime       @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt         DateTime       @db.Timestamptz(6) @default(now()) @updatedAt @map("updated_at")
+  supplier Supplier @relation("TripBookingItem_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "trip_booking_items_supplier_id_fkey")
+  booking Booking @relation("TripBookingItem_booking", fields: [supplierId, bookingId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "trip_booking_items_supplier_id_booking_id_fkey")
+  trip Trip @relation("TripBookingItem_trip", fields: [supplierId, tripId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "trip_booking_items_supplier_id_trip_id_fkey")
+  variant TripVariant? @relation("TripBookingItem_variant", fields: [supplierId, variantId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "trip_booking_items_supplier_id_variant_id_fkey")
+  schedule TripSchedule @relation("TripBookingItem_schedule", fields: [supplierId, scheduleId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "trip_booking_items_supplier_id_schedule_id_fkey")
+  @@index([supplierId, bookingId], map: "trip_booking_items_supplier_id_booking_id_idx")
+  @@index([supplierId, scheduleId], map: "trip_booking_items_supplier_id_schedule_id_idx")
+  @@index([supplierId, tripId], map: "trip_booking_items_supplier_id_trip_id_idx")
+  @@map("trip_booking_items")
+}
+
+model TransportBookingItem {
+  id                String         @id(map: "transport_booking_items_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId        String         @db.Uuid @map("supplier_id")
+  bookingId         String         @db.Uuid @map("booking_id")
+  serviceId         String?        @db.Uuid @map("service_id")
+  vehicleTypeId     String         @db.Uuid @map("vehicle_type_id")
+  originZoneId      String?        @db.Uuid @map("origin_zone_id")
+  destinationZoneId String?        @db.Uuid @map("destination_zone_id")
+  pickupAt          DateTime       @db.Timestamptz(6) @map("pickup_at")
+  pickupAddress     String         @map("pickup_address")
+  dropoffAddress    String         @map("dropoff_address")
+  flightNumber      String?        @db.VarChar(20) @map("flight_number")
+  passengers        Int            @default(1)
+  luggage           Int            @default(0)
+  isReturnLeg       Boolean        @default(false) @map("is_return_leg")
+  amount            Decimal        @db.Decimal(14,2)
+  driverId          String?        @db.Uuid @map("driver_id")
+  vehicleId         String?        @db.Uuid @map("vehicle_id")
+  assignmentStatus  AssignmentStatus @default(UNASSIGNED) @map("assignment_status")
+  assignedAt        DateTime?      @db.Timestamptz(6) @map("assigned_at")
+  startedAt         DateTime?      @db.Timestamptz(6) @map("started_at")
+  completedAt       DateTime?      @db.Timestamptz(6) @map("completed_at")
+  driverNotes       String?        @map("driver_notes")
+  createdBy         String?        @db.Uuid @map("created_by")
+  updatedBy         String?        @db.Uuid @map("updated_by")
+  createdAt         DateTime       @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt         DateTime       @db.Timestamptz(6) @default(now()) @updatedAt @map("updated_at")
+  supplier Supplier @relation("TransportBookingItem_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "transport_booking_items_supplier_id_fkey")
+  booking Booking @relation("TransportBookingItem_booking", fields: [supplierId, bookingId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "transport_booking_items_supplier_id_booking_id_fkey")
+  service TransportService? @relation("TransportBookingItem_service", fields: [supplierId, serviceId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "transport_booking_items_supplier_id_service_id_fkey")
+  vehicleType VehicleType @relation("TransportBookingItem_vehicleType", fields: [supplierId, vehicleTypeId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "transport_booking_items_supplier_id_vehicle_type_id_fkey")
+  originZone TransportZone? @relation("TransportBookingItem_originZone", fields: [supplierId, originZoneId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "transport_booking_items_supplier_id_origin_zone_id_fkey")
+  destinationZone TransportZone? @relation("TransportBookingItem_destinationZone", fields: [supplierId, destinationZoneId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "transport_booking_items_supplier_id_destination_zone_id_fkey")
+  driver Driver? @relation("TransportBookingItem_driver", fields: [supplierId, driverId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "transport_booking_items_supplier_id_driver_id_fkey")
+  vehicle Vehicle? @relation("TransportBookingItem_vehicle", fields: [supplierId, vehicleId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "transport_booking_items_supplier_id_vehicle_id_fkey")
+  @@index([supplierId, bookingId], map: "transport_booking_items_supplier_id_booking_id_idx")
+  @@index([supplierId, pickupAt], map: "transport_booking_items_supplier_id_pickup_at_idx")
+  @@index([supplierId, driverId, pickupAt], map: "transport_booking_items_supplier_id_driver_id_pickup_at_idx")
+  @@index([supplierId, vehicleId, pickupAt], map: "transport_booking_items_supplier_id_vehicle_id_pickup_at_idx")
+  @@index([supplierId, assignmentStatus], map: "transport_booking_items_supplier_id_assignment_status_idx")
+  @@map("transport_booking_items")
+}
+
+model ClubBookingItem {
+  id             String         @id(map: "club_booking_items_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId     String         @db.Uuid @map("supplier_id")
+  bookingId      String         @db.Uuid @map("booking_id")
+  clubId         String         @db.Uuid @map("club_id")
+  eventId        String?        @db.Uuid @map("event_id")
+  ticketTypeId   String?        @db.Uuid @map("ticket_type_id")
+  tablePackageId String?        @db.Uuid @map("table_package_id")
+  visitDate      DateTime       @db.Date @map("visit_date")
+  arrivalTime    String?        @db.VarChar(5) @map("arrival_time")
+  guests         Int            @default(1)
+  quantity       Int            @default(1)
+  unitPrice      Decimal        @db.Decimal(14,2) @map("unit_price")
+  amount         Decimal        @db.Decimal(14,2)
+  tableLabel     String?        @db.VarChar(20) @map("table_label")
+  checkedInAt    DateTime?      @db.Timestamptz(6) @map("checked_in_at")
+  checkedInCount Int            @default(0) @map("checked_in_count")
+  createdBy      String?        @db.Uuid @map("created_by")
+  updatedBy      String?        @db.Uuid @map("updated_by")
+  createdAt      DateTime       @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt      DateTime       @db.Timestamptz(6) @default(now()) @updatedAt @map("updated_at")
+  supplier Supplier @relation("ClubBookingItem_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "club_booking_items_supplier_id_fkey")
+  booking Booking @relation("ClubBookingItem_booking", fields: [supplierId, bookingId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "club_booking_items_supplier_id_booking_id_fkey")
+  club Club @relation("ClubBookingItem_club", fields: [supplierId, clubId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "club_booking_items_supplier_id_club_id_fkey")
+  event ClubEvent? @relation("ClubBookingItem_event", fields: [supplierId, eventId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "club_booking_items_supplier_id_event_id_fkey")
+  ticketType ClubTicketType? @relation("ClubBookingItem_ticketType", fields: [supplierId, ticketTypeId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "club_booking_items_supplier_id_ticket_type_id_fkey")
+  tablePackage ClubTablePackage? @relation("ClubBookingItem_tablePackage", fields: [supplierId, tablePackageId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "club_booking_items_supplier_id_table_package_id_fkey")
+  @@index([supplierId, bookingId], map: "club_booking_items_supplier_id_booking_id_idx")
+  @@index([supplierId, clubId, visitDate], map: "club_booking_items_supplier_id_club_id_visit_date_idx")
+  @@index([supplierId, eventId], map: "club_booking_items_supplier_id_event_id_idx")
+  @@map("club_booking_items")
+}
+
+model Payment {
+  id           String         @id(map: "payments_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId   String         @db.Uuid @map("supplier_id")
+  bookingId    String         @db.Uuid @map("booking_id")
+  kind         PaymentKind    @default(PAYMENT)
+  method       PaymentMethod  
+  txStatus     PaymentTxStatus @default(SUCCEEDED) @map("tx_status")
+  amount       Decimal        @db.Decimal(14,2)
+  currencyCode String         @db.Char(3) @map("currency_code")
+  reference    String?        @db.VarChar(100)
+  paidAt       DateTime       @db.Timestamptz(6) @default(now()) @map("paid_at")
+  notes        String?        
+  refundOfId   String?        @db.Uuid @map("refund_of_id")
+  recordedBy   String?        @db.Uuid @map("recorded_by")
+  createdBy    String?        @db.Uuid @map("created_by")
+  updatedBy    String?        @db.Uuid @map("updated_by")
+  createdAt    DateTime       @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt    DateTime       @db.Timestamptz(6) @default(now()) @updatedAt @map("updated_at")
+  supplier Supplier @relation("Payment_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "payments_supplier_id_fkey")
+  booking Booking @relation("Payment_booking", fields: [supplierId, bookingId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "payments_supplier_id_booking_id_fkey")
+  refundOf Payment? @relation("Payment_refundOf", fields: [supplierId, refundOfId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "payments_supplier_id_refund_of_id_fkey")
+  currency Currency @relation("Payment_currency", fields: [currencyCode], references: [code], onDelete: Restrict, onUpdate: Cascade, map: "payments_currency_code_fkey")
+  payments Payment[] @relation("Payment_refundOf")
+  @@unique([supplierId, id], map: "payments_supplier_id_id_key")
+  @@index([supplierId, bookingId], map: "payments_supplier_id_booking_id_idx")
+  @@index([supplierId, paidAt], map: "payments_supplier_id_paid_at_idx")
+  @@index([supplierId, txStatus], map: "payments_supplier_id_tx_status_idx")
+  @@map("payments")
+}
+
+model BookingEvent {
+  id         String         @id(map: "booking_events_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String         @db.Uuid @map("supplier_id")
+  bookingId  String         @db.Uuid @map("booking_id")
+  eventType  BookingEventType @map("event_type")
+  fromStatus BookingStatus? @map("from_status")
+  toStatus   BookingStatus? @map("to_status")
+  message    String?        
+  data       Json           @default("{}")
+  actorId    String?        @db.Uuid @map("actor_id")
+  actorName  String?        @db.VarChar(150) @map("actor_name")
+  createdAt  DateTime       @db.Timestamptz(6) @default(now()) @map("created_at")
+  supplier Supplier @relation("BookingEvent_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "booking_events_supplier_id_fkey")
+  booking Booking @relation("BookingEvent_booking", fields: [supplierId, bookingId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "booking_events_supplier_id_booking_id_fkey")
+  @@index([supplierId, bookingId, createdAt], map: "booking_events_supplier_id_booking_id_created_at_idx")
+  @@map("booking_events")
+}
+
+enum EmailRecipientKind {
+  GUEST
+  SUPPLIER
+}
+
+enum EmailStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model EmailOutbox {
+  id            String                 @id(map: "email_outbox_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId    String                 @db.Uuid @map("supplier_id")
+  bookingId     String                 @db.Uuid @map("booking_id")
+  template      String                 @db.VarChar(40)
+  recipientKind EmailRecipientKind     @map("recipient_kind")
+  toEmail       String?                @db.VarChar(254) @map("to_email")
+  subject       String                 @db.VarChar(200)
+  bodyText      String                 @map("body_text")
+  status        EmailStatus            @default(QUEUED)
+  attempts      Int                    @default(0)
+  lastError     String?                @map("last_error")
+  createdAt     DateTime               @db.Timestamptz(6) @default(now()) @map("created_at")
+  sentAt        DateTime?              @db.Timestamptz(6) @map("sent_at")
+  supplier Supplier @relation("EmailOutbox_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "email_outbox_supplier_id_fkey")
+  booking Booking @relation("EmailOutbox_booking", fields: [supplierId, bookingId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "email_outbox_supplier_id_booking_id_fkey")
+  @@index([status, createdAt], map: "email_outbox_status_created_at_idx")
+  @@index([supplierId, bookingId], map: "email_outbox_supplier_id_booking_id_idx")
+  @@map("email_outbox")
+}
+
+// ==== END BOOKINGS ====
+
+// ==== INTEGRATIONS ====
+enum IntegrationKind {
+  PMS
+  CHANNEL
+  PAYMENT
+  EMAIL
+  AI
+}
+enum IntegrationStatus {
+  DISABLED
+  PENDING
+  CONNECTED
+  ERROR
+}
+enum EventDirection {
+  IN
+  OUT
+}
+enum IntegrationEventStatus {
+  PENDING
+  DONE
+  FAILED
+  DEAD
+  SKIPPED
+}
+enum PmsStayStatus {
+  RESERVED
+  IN_HOUSE
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+
+model IntegrationConnection {
+  id         String            @id(map: "integration_connection_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String            @db.Uuid @map("supplier_id")
+  kind       IntegrationKind
+  provider   String            @db.VarChar(30)
+  name       String            @db.VarChar(80)
+  status     IntegrationStatus @default(PENDING)
+  enabled    Boolean           @default(true)
+  config     Json              @default("{}")
+  secretRef  String?           @db.VarChar(80) @map("secret_ref")
+  lastOkAt   DateTime?         @db.Timestamptz(6) @map("last_ok_at")
+  lastSyncAt DateTime?         @db.Timestamptz(6) @map("last_sync_at")
+  lastError  String?           @map("last_error")
+  createdAt  DateTime          @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt  DateTime          @db.Timestamptz(6) @default(now()) @updatedAt @map("updated_at")
+  supplier Supplier @relation("IntegrationConnection_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "integration_connection_supplier_id_fkey")
+  externalRefs ExternalRef[] @relation("ExternalRef_connection")
+  events IntegrationEvent[] @relation("IntegrationEvent_connection")
+  pmsReservations PmsReservation[] @relation("PmsReservation_connection")
+  pmsRoomStates PmsRoomState[] @relation("PmsRoomState_connection")
+  @@unique([supplierId, kind, provider], map: "integration_connection_supplier_id_kind_provider_key")
+  @@unique([supplierId, id], map: "integration_connection_supplier_id_id_key")
+  @@map("integration_connection")
+}
+
+model WebhookEndpoint {
+  id          String   @id(map: "webhook_endpoint_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId  String   @db.Uuid @map("supplier_id")
+  url         String   @db.VarChar(500)
+  description String?  @db.VarChar(120)
+  topics      String[] @default([])
+  active      Boolean  @default(true)
+  createdAt   DateTime @db.Timestamptz(6) @default(now()) @map("created_at")
+  supplier Supplier @relation("WebhookEndpoint_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "webhook_endpoint_supplier_id_fkey")
+  events IntegrationEvent[] @relation("IntegrationEvent_webhook")
+  @@unique([supplierId, id], map: "webhook_endpoint_supplier_id_id_key")
+  @@map("webhook_endpoint")
+}
+
+model ExternalRef {
+  id           String   @id(map: "external_ref_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId   String   @db.Uuid @map("supplier_id")
+  connectionId String   @db.Uuid @map("connection_id")
+  entityType   String   @db.VarChar(30) @map("entity_type")
+  entityId     String   @db.Uuid @map("entity_id")
+  externalId   String   @db.VarChar(100) @map("external_id")
+  createdAt    DateTime @db.Timestamptz(6) @default(now()) @map("created_at")
+  connection IntegrationConnection @relation("ExternalRef_connection", fields: [supplierId, connectionId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "external_ref_supplier_id_connection_id_fkey")
+  @@unique([connectionId, entityType, externalId], map: "external_ref_connection_id_entity_type_external_id_key")
+  @@unique([connectionId, entityType, entityId], map: "external_ref_connection_id_entity_type_entity_id_key")
+  @@map("external_ref")
+}
+
+model IntegrationEvent {
+  id             String                 @id(map: "integration_event_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId     String                 @db.Uuid @map("supplier_id")
+  connectionId   String?                @db.Uuid @map("connection_id")
+  webhookId      String?                @db.Uuid @map("webhook_id")
+  direction      EventDirection
+  topic          String                 @db.VarChar(60)
+  idempotencyKey String                 @db.VarChar(160) @map("idempotency_key")
+  payload        Json                   @default("{}")
+  status         IntegrationEventStatus @default(PENDING)
+  attempts       Int                    @default(0)
+  nextAttemptAt  DateTime               @db.Timestamptz(6) @default(now()) @map("next_attempt_at")
+  lastError      String?                @map("last_error")
+  createdAt      DateTime               @db.Timestamptz(6) @default(now()) @map("created_at")
+  doneAt         DateTime?              @db.Timestamptz(6) @map("done_at")
+  connection IntegrationConnection? @relation("IntegrationEvent_connection", fields: [supplierId, connectionId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "integration_event_supplier_id_connection_id_fkey")
+  webhook WebhookEndpoint? @relation("IntegrationEvent_webhook", fields: [supplierId, webhookId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "integration_event_supplier_id_webhook_id_fkey")
+  @@unique([supplierId, direction, idempotencyKey], map: "integration_event_idempotency_key")
+  @@index([status, nextAttemptAt], map: "integration_event_status_next_attempt_at_idx")
+  @@index([supplierId, createdAt], map: "integration_event_supplier_id_created_at_idx")
+  @@map("integration_event")
+}
+
+model ApiKey {
+  id         String    @id(map: "api_key_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String    @db.Uuid @map("supplier_id")
+  name       String    @db.VarChar(80)
+  prefix     String    @unique(map: "api_key_prefix_key") @db.VarChar(12)
+  keyHash    String    @db.Char(64) @map("key_hash")
+  scopes     String[]  @default([])
+  lastUsedAt DateTime? @db.Timestamptz(6) @map("last_used_at")
+  revokedAt  DateTime? @db.Timestamptz(6) @map("revoked_at")
+  createdAt  DateTime  @db.Timestamptz(6) @default(now()) @map("created_at")
+  supplier Supplier @relation("ApiKey_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "api_key_supplier_id_fkey")
+  @@map("api_key")
+}
+
+model PmsReservation {
+  id             String        @id(map: "pms_reservation_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId     String        @db.Uuid @map("supplier_id")
+  connectionId   String        @db.Uuid @map("connection_id")
+  externalId     String        @db.VarChar(100) @map("external_id")
+  confirmationNo String?       @db.VarChar(40) @map("confirmation_no")
+  guestName      String        @db.VarChar(160) @map("guest_name")
+  guestEmail     String?       @db.VarChar(254) @map("guest_email")
+  guestPhone     String?       @db.VarChar(40) @map("guest_phone")
+  roomType       String?       @db.VarChar(80) @map("room_type")
+  roomNo         String?       @db.VarChar(20) @map("room_no")
+  arrival        DateTime      @db.Date
+  departure      DateTime      @db.Date
+  adults         Int           @default(1)
+  children       Int           @default(0)
+  status         PmsStayStatus @default(RESERVED)
+  rateCode       String?       @db.VarChar(40) @map("rate_code")
+  balance        Decimal       @db.Decimal(14,2) @default(0)
+  syncedAt       DateTime      @db.Timestamptz(6) @default(now()) @map("synced_at")
+  connection IntegrationConnection @relation("PmsReservation_connection", fields: [supplierId, connectionId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "pms_reservation_supplier_id_connection_id_fkey")
+  @@unique([connectionId, externalId], map: "pms_reservation_connection_id_external_id_key")
+  @@index([supplierId, arrival], map: "pms_reservation_supplier_id_arrival_idx")
+  @@index([supplierId, departure], map: "pms_reservation_supplier_id_departure_idx")
+  @@map("pms_reservation")
+}
+
+model PmsRoomState {
+  id           String   @id(map: "pms_room_state_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId   String   @db.Uuid @map("supplier_id")
+  connectionId String   @db.Uuid @map("connection_id")
+  roomNo       String   @db.VarChar(20) @map("room_no")
+  foStatus     String   @db.VarChar(20) @default("VACANT") @map("fo_status")
+  hkStatus     String   @db.VarChar(20) @default("CLEAN") @map("hk_status")
+  syncedAt     DateTime @db.Timestamptz(6) @default(now()) @map("synced_at")
+  connection IntegrationConnection @relation("PmsRoomState_connection", fields: [supplierId, connectionId], references: [supplierId, id], onDelete: Cascade, onUpdate: Cascade, map: "pms_room_state_supplier_id_connection_id_fkey")
+  @@unique([connectionId, roomNo], map: "pms_room_state_connection_id_room_no_key")
+  @@map("pms_room_state")
+}
+// ==== END INTEGRATIONS ====
