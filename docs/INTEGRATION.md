@@ -98,3 +98,6 @@ Charge to room: when a booking with a room number is created, an event `pms.post
 - OPERA Cloud: OHIP developer access, the hotel's chain and hotel codes, and an app key. VHP: the vendor's API spec and a test property.
 - A real mail provider and payment provider for the live app.
 - Real channel connections (Booking.com, Expedia, Agoda) need each partner programme or a channel manager aggregator.
+
+
+The guest app now emits `request.created` for real: every request a guest sends from `/guest/` (towels, late checkout, transfer, and so on) creates an ops task and an outbox event with `{ ref, service, room, bookingNo, details }`, so a PMS or chat tool can subscribe to it.

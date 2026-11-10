@@ -561,3 +561,6 @@ erDiagram
 - Check constraints, the EXCLUDE constraint, RLS and triggers live only in SQL migrations, so Prisma does not know about them. Do not run `prisma db push`.
 - Cross-tenant references to shared tables (cities, amenities, categories) are not FK-enforced; the API validates them.
 - Supabase specifics: use the pooled URL (port 6543, `pgbouncer=true`) at runtime. `set_config(..., true)` is transaction-local, so it is safe with transaction pooling as long as every request uses one transaction.
+
+## 4c. Ops board and Guest concierge
+The staff Ops board (`apps/ops`, `/ops/`) uses the admin shell; the guest app (`apps/guest`, `/guest/`) is standalone with its own token and client. Endpoints are `/api/v1/ops/*` (staff) and `/api/v1/guest/*` (guests). Details in `BOOKING-ARCHITECTURE.md`, section "Ops board and Guest concierge". New settings: `ANTHROPIC_API_KEY`, `ASSISTANT_MODEL`, `GUEST_TOKEN_HOURS`. After pulling: migrate, re-run `prisma/sql/roles.sql`, `npm run db:seed:ops`.

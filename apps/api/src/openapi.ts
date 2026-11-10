@@ -108,11 +108,87 @@ export function buildOpenApi() {
     add(p, m, { tags: [T], summary, parameters: [...(hasId ? [idParam] : []), ...q(...(params ?? []))], ...(m === 'post' || m === 'patch' ? { requestBody: { required: false, ...json({ type: 'object' }) } } : {}), responses: { 200: { description: 'OK' }, ...(m === 'post' ? { 201: { description: 'Created' } } : {}), ...err } });
   }
 
+  // ---- Integrations, Ops board and Guest concierge (hand-written) ----
+  const tagged: [string, string, string, string, string[]?][] = [
+    ['Integrations', '/integrations', 'get', 'PMS and channel connections of the supplier', []],
+    ['Integrations', '/integrations', 'post', 'Add a connection { provider, name, config } (admins)', []],
+    ['Integrations', '/integrations/{id}', 'patch', 'Update or pause a connection (admins)', []],
+    ['Integrations', '/integrations/{id}', 'delete', 'Remove a connection (admins)', []],
+    ['Integrations', '/integrations/{id}/test', 'post', 'Test the connection', []],
+    ['Integrations', '/integrations/{id}/sync', 'post', 'Pull reservations and room states now', []],
+    ['Integrations', '/integration-events', 'get', 'Outbox and inbound event log', ['topic', 'status', 'page', 'limit']],
+    ['Integrations', '/integration-events/{id}/retry', 'post', 'Retry a failed event', []],
+    ['Integrations', '/integration-events/run', 'post', 'Run the delivery worker now', []],
+    ['Integrations', '/api-keys', 'get', 'API keys (prefix only; secrets are never shown again)', []],
+    ['Integrations', '/api-keys', 'post', 'Create an API key { name, scopes }. The full key is returned once', []],
+    ['Integrations', '/api-keys/{id}', 'delete', 'Revoke an API key', []],
+    ['Integrations', '/webhooks', 'get', 'Outbound webhook subscriptions', []],
+    ['Integrations', '/webhooks', 'post', 'Add a webhook { url, topics }', []],
+    ['Integrations', '/webhooks/{id}', 'patch', 'Update a webhook', []],
+    ['Integrations', '/webhooks/{id}', 'delete', 'Delete a webhook', []],
+    ['Integrations', '/webhooks/{id}/test', 'post', 'Send a test event', []],
+    ['Integrations', '/webhooks/{id}/secret', 'get', 'Signing secret (admins)', []],
+    ['Integrations', '/pms/reservations', 'get', 'Mirror of reservations read from the PMS', ['page', 'limit']],
+    ['Integrations', '/pms/rooms', 'get', 'Mirror of room states read from the PMS', []],
+    ['Ops board', '/ops/overview', 'get', 'Counts, rooms by status, workload and alerts (request past target, task overdue or blocked, order waiting)', []],
+    ['Ops board', '/ops/tasks', 'get', 'Tasks and guest requests', ['kind', 'status', 'department', 'assigneeId', 'q', 'open', 'page', 'limit']],
+    ['Ops board', '/ops/tasks', 'post', 'Create a task { title, department, priority, assigneeId?, roomNumber?, notes? }', []],
+    ['Ops board', '/ops/tasks/{id}', 'patch', 'Change status, assignee, priority, notes, due time or department (writes the history)', []],
+    ['Ops board', '/ops/tasks/{id}/notes', 'post', 'Add a note { message }', []],
+    ['Ops board', '/ops/tasks/{id}', 'delete', 'Delete a task (admins)', []],
+    ['Ops board', '/ops/staff', 'get', 'Ops staff and duty status', []],
+    ['Ops board', '/ops/staff', 'post', 'Add staff (admins)', []],
+    ['Ops board', '/ops/staff/{id}', 'patch', 'Update staff; any user may toggle onDuty', []],
+    ['Ops board', '/ops/staff/{id}', 'delete', 'Remove staff (admins)', []],
+    ['Ops board', '/ops/rooms', 'get', 'Rooms with housekeeping status and Do Not Disturb', []],
+    ['Ops board', '/ops/rooms', 'post', 'Add one room or { rooms: [...] } (admins; existing numbers are skipped)', []],
+    ['Ops board', '/ops/rooms/{id}', 'patch', 'Change status, dnd or notes', []],
+    ['Ops board', '/ops/rooms/{id}', 'delete', 'Delete a room (admins)', []],
+    ['Ops board', '/ops/dining/items', 'get', 'Room dining menu', []],
+    ['Ops board', '/ops/dining/items', 'post', 'Add a menu item (admins)', []],
+    ['Ops board', '/ops/dining/items/{id}', 'patch', 'Edit an item (admins); staff may only toggle available', []],
+    ['Ops board', '/ops/dining/items/{id}', 'delete', 'Delete an item (admins)', []],
+    ['Ops board', '/ops/dining/orders', 'get', 'Room dining orders', ['status', 'open', 'page', 'limit']],
+    ['Ops board', '/ops/dining/orders/{id}', 'patch', 'Move an order: PREPARING, ON_THE_WAY, DELIVERED or CANCELLED', []],
+    ['Ops board', '/ops/kb', 'get', 'Knowledge base documents the guest assistant answers from', []],
+    ['Ops board', '/ops/kb', 'post', 'Add a document (admins)', []],
+    ['Ops board', '/ops/kb/{id}', 'patch', 'Edit or hide a document (admins)', []],
+    ['Ops board', '/ops/kb/{id}', 'delete', 'Delete a document (admins)', []],
+    ['Ops board', '/ops/notes', 'get', 'Shift handover notes', []],
+    ['Ops board', '/ops/notes', 'post', 'Add a shift note { body }', []],
+  ];
+  for (const [tag, p, m, summary, params] of tagged) {
+    add(p, m, { tags: [tag], summary, parameters: [...(p.includes('{id}') ? [idParam] : []), ...q(...(params ?? []))], ...(m === 'post' || m === 'patch' ? { requestBody: { required: false, ...json({ type: 'object' }) } } : {}), responses: { 200: { description: 'OK' }, ...err } });
+  }
+  paths[`${P}/integrations/inbound/{id}`] = { post: { tags: ['Integrations'], summary: 'Inbound webhook from a PMS or channel. Public; authenticated by the HMAC signature header', parameters: [idParam], requestBody: { required: true, ...json({ type: 'object' }) }, responses: { 200: { description: 'Accepted' }, 401: { description: 'Bad signature' } } } };
+
+  // Guest app: a separate token (issuer booking-admin, audience booking-admin-guest) obtained from /guest/auth
+  const guestSec = [{ guestAuth: [] }];
+  const G = 'Guest concierge';
+  paths[`${P}/guest/auth`] = { post: { tags: [G], summary: 'Sign in with { bookingNo, lastName }. The booking must be CONFIRMED, from the day before check-in until check-out. Rate limited', requestBody: { required: true, ...json({ type: 'object', required: ['bookingNo', 'lastName'], properties: { bookingNo: { type: 'string' }, lastName: { type: 'string' } } }) }, responses: { 200: { description: 'OK: { token, name, room }' }, 401: { description: 'No current stay found' }, 429: { description: 'Too many attempts' } } } };
+  const guestRoutes: [string, string, string][] = [
+    ['/guest/me', 'get', 'The guest stay: room, dates, hotel details, balance, Do Not Disturb'],
+    ['/guest/services', 'get', 'Services the guest can request, with their questions and progress steps'],
+    ['/guest/menu', 'get', 'Available room dining items'],
+    ['/guest/dnd', 'patch', 'Set Do Not Disturb { dnd } (needs a room)'],
+    ['/guest/requests', 'get', 'The guest requests with the current progress step'],
+    ['/guest/requests', 'post', 'Create a request { service, answers, note?, urgent? }. Needs a room; creates an ops task and emits request.created'],
+    ['/guest/orders', 'get', 'The guest dining orders'],
+    ['/guest/orders', 'post', 'Order { items: [{ id, qty }], note?, when }. Prices come from the menu on the server'],
+    ['/guest/bookings', 'get', 'Other bookings of the same guest'],
+    ['/guest/kb', 'get', 'Search the knowledge base (?q=)'],
+    ['/guest/assistant', 'post', 'Ask { message, history? }. With ANTHROPIC_API_KEY the model answers in the guest language (mode "ai"); otherwise keyword search (mode "search"). 20 per minute'],
+  ];
+  for (const [p, m, summary] of guestRoutes) {
+    paths[P + p] ??= {};
+    paths[P + p][m] = { tags: [G], security: guestSec, summary, ...(p === '/guest/kb' ? { parameters: [{ name: 'q', in: 'query', required: true, schema: { type: 'string' } }] } : {}), ...(m === 'post' || m === 'patch' ? { requestBody: { required: true, ...json({ type: 'object' }) } } : {}), responses: { 200: { description: 'OK' }, 201: { description: 'Created' }, 401: { description: 'Sign in again' }, 409: { description: 'Needs a room, or too many open requests' }, 422: { description: 'Validation failed' } } };
+  }
+
   return {
     openapi: '3.0.3',
     info: { title: 'Booking Admin API', version: '1.0.0', description: 'Master data admin API. Response envelope: { success, data, message, errors, meta: { page, limit, total } }. Supplier isolation: taken from the JWT; SUPER_ADMIN may send X-Supplier-Id.' },
     servers: [{ url: '/' }],
-    components: { securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } }, schemas },
+    components: { securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, guestAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', description: 'Guest token from POST /guest/auth. Only valid on /guest/*' } }, schemas },
     paths,
   };
 }

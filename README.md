@@ -47,6 +47,31 @@ This starts PostgreSQL, applies the migrations, loads the demo seed (`RUN_SEED=f
 5. Seed once if you want demo data: `DIRECT_URL=<direct url> npm run db:seed`. For a real launch, create only the super admin instead (edit `prisma/seed.ts` or insert the user yourself).
 6. Serve the admin apps and `/api` from the **same origin** (the included image does this: the API mounts each app at `/hotel/`, `/trips/`, `/transport/`, `/club/`, `/operator/`, `/ops/`, `/guest/` from `apps/<name>/dist`; `WEB_ROOT` changes the folder). One login works in all five because the session cookies are shared on the origin. Set `COOKIE_SECURE=true`, `CORS_ORIGIN` to the public URL, `TRUST_PROXY=1` behind one proxy, and a long random `JWT_ACCESS_SECRET`.
 
+### Supabase setup checklist
+
+- [ ] Project created; direct (5432) and pooled (6543) connection strings saved.
+- [ ] `DIRECT_URL=<direct> npx prisma migrate deploy` ran without errors.
+- [ ] `prisma/sql/roles.sql` run in the SQL editor with a **new** `app_runtime` password (re-run after every new migration).
+- [ ] API uses `DATABASE_URL` = pooled URL as `app_runtime`, with `?pgbouncer=true`. Never the `postgres` role.
+- [ ] Supabase's own Data API is closed to these tables. Either turn off the Data API (Project Settings, API), or run this in the SQL editor:
+
+  ```sql
+  REVOKE ALL ON ALL TABLES    IN SCHEMA public FROM anon, authenticated;
+  REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
+  REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon, authenticated;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES    FROM anon, authenticated;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon, authenticated;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM anon, authenticated;
+  ```
+
+  The API connects as `app_runtime`, so this does not affect it. Re-run it after new migrations if default privileges were not set.
+- [ ] Check it: `curl "https://<ref>.supabase.co/rest/v1/bookings?select=id" -H "apikey: <anon key>"` must return an error or an empty list, never rows.
+- [ ] `CORS_ORIGIN` = the public URL, `COOKIE_SECURE=true`, a long random `JWT_ACCESS_SECRET`.
+- [ ] Optional demo data: `npm run db:seed` and `npm run db:seed:ops` (use `DIRECT_URL`).
+- [ ] Turn on Supabase backups (point-in-time recovery needs a paid plan).
+
+Not yet tested against a real Supabase project: only local Postgres 16 has been used, so run the check above once.
+
 ### Ops board and Guest concierge
 
 - `apps/ops` (staff, `/ops/`) uses the admin shell and the same login. API: `/api/v1/ops/*` (tasks, guest requests with SLA, rooms, room dining, knowledge base, staff, shift notes, overview alerts).
