@@ -27,7 +27,7 @@ const configSchema = (kind: string) => z.record(z.string(), z.union([z.string().
 });
 const createConn = z.object({ kind: z.enum(['PMS', 'CHANNEL', 'PAYMENT', 'EMAIL', 'AI']), provider: z.string().min(2).max(30).regex(/^[a-z0-9-]+$/), name: z.string().min(1).max(80), config: z.record(z.string(), z.unknown()).default({}), secretRef }).strict();
 const patchConn = z.object({ name: z.string().min(1).max(80).optional(), enabled: z.boolean().optional(), config: z.record(z.string(), z.unknown()).optional(), secretRef }).strict();
-const pub = (c: any) => ({ id: c.id, kind: c.kind, provider: c.provider, name: c.name, status: c.status, enabled: c.enabled, config: c.config, secretRef: c.secretRef, lastOkAt: c.lastOkAt, lastSyncAt: c.lastSyncAt, lastError: c.lastError, createdAt: c.createdAt, inboundUrl: `/api/v1/integrations/inbound/${c.id}` });
+const pub = (c: any) => ({ id: c.id, supplierId: c.supplierId, kind: c.kind, provider: c.provider, name: c.name, status: c.status, enabled: c.enabled, config: c.config, secretRef: c.secretRef, lastOkAt: c.lastOkAt, lastSyncAt: c.lastSyncAt, lastError: c.lastError, createdAt: c.createdAt, inboundUrl: `/api/v1/integrations/inbound/${c.id}` });
 
 integrationsRouter.get('/integrations', h(async (req) => ({ data: (await tx(req, (t) => t.integrationConnection.findMany({ where: req.scope!.supplierId ? { supplierId: req.scope!.supplierId } : {}, orderBy: [{ kind: 'asc' }, { name: 'asc' }] }))).map(pub) })));
 
@@ -90,7 +90,7 @@ integrationsRouter.post('/integrations/:id/sync', h(async (req) => {
 const evQ = z.object({ status: z.enum(['PENDING', 'DONE', 'FAILED', 'DEAD', 'SKIPPED']).optional(), direction: z.enum(['IN', 'OUT']).optional(), topic: z.string().max(60).optional(), page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(100).default(25) });
 integrationsRouter.get('/integration-events', h(async (req) => {
   const q = evQ.parse(req.query), s = req.scope!, where = { ...(s.supplierId ? { supplierId: s.supplierId } : {}), ...(q.status && { status: q.status }), ...(q.direction && { direction: q.direction }), ...(q.topic && { topic: q.topic }) };
-  const [rows, total] = await tx(req, (t) => Promise.all([t.integrationEvent.findMany({ where, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], skip: (q.page - 1) * q.limit, take: q.limit, select: { id: true, direction: true, topic: true, status: true, attempts: true, lastError: true, nextAttemptAt: true, createdAt: true, doneAt: true, connectionId: true, webhookId: true } }), t.integrationEvent.count({ where })]));
+  const [rows, total] = await tx(req, (t) => Promise.all([t.integrationEvent.findMany({ where, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], skip: (q.page - 1) * q.limit, take: q.limit, select: { id: true, direction: true, topic: true, status: true, attempts: true, lastError: true, nextAttemptAt: true, createdAt: true, doneAt: true, connectionId: true, webhookId: true, supplierId: true } }), t.integrationEvent.count({ where })]));
   return { data: rows, meta: { page: q.page, limit: q.limit, total } };
 }));
 integrationsRouter.post('/integration-events/:id/retry', h(async (req) => {

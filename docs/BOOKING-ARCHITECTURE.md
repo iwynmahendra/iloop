@@ -10,7 +10,7 @@ Five back-office apps on top of the existing master-data platform:
 | **Club Admin** | Venue staff and admins | Tickets, tables, guest lists, door check-in |
 | **Operator Console** | Platform operator (SUPER_ADMIN) | All suppliers and all four products, commission, reports |
 
-The existing **Master Data panel** (`apps/web`) stays as it is. Nothing in the master-data tables changed except one extra unique index on eight tables (needed for the booking foreign keys).
+The **Master Data panel** now lives in `packages/admin-kit` and is used by all five admin apps. Nothing in the master-data tables changed except one extra unique index on eight tables (needed for the booking foreign keys).
 
 ## 1. What is reused, what is new
 

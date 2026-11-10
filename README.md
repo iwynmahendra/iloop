@@ -45,18 +45,22 @@ This starts PostgreSQL, applies the migrations, loads the demo seed (`RUN_SEED=f
 3. In the SQL editor, run `prisma/sql/roles.sql` after changing the password. This creates `app_runtime`.
 4. Run the API with `DATABASE_URL` = the **pooled** URL for `app_runtime` (`...:6543/postgres?pgbouncer=true`). Never use the `postgres` role at runtime: it can bypass row level security.
 5. Seed once if you want demo data: `DIRECT_URL=<direct url> npm run db:seed`. For a real launch, create only the super admin instead (edit `prisma/seed.ts` or insert the user yourself).
-6. Serve the web app and `/api` from the **same origin** (the included image does this, or use a reverse proxy). Set `COOKIE_SECURE=true`, `CORS_ORIGIN` to the public URL, `TRUST_PROXY=1` behind one proxy, and a long random `JWT_ACCESS_SECRET`.
+6. Serve the admin apps and `/api` from the **same origin** (the included image does this: the API mounts each app at `/hotel/`, `/trips/`, `/transport/`, `/club/`, `/operator/` from `apps/<name>/dist`; `WEB_ROOT` changes the folder). One login works in all five because the session cookies are shared on the origin. Set `COOKIE_SECURE=true`, `CORS_ORIGIN` to the public URL, `TRUST_PROXY=1` behind one proxy, and a long random `JWT_ACCESS_SECRET`.
 
 ## Local development (without Docker)
 
 ```bash
-npm install                                   # root: installs api + web workspaces
+npm install                                   # root: installs the api, the shared kit and the five admin apps
 cp .env.example .env                          # fill DATABASE_URL, DIRECT_URL, JWT_ACCESS_SECRET
 npx prisma generate
 npm run db:migrate && psql "$DIRECT_URL" -f prisma/sql/roles.sql    # edit the password first
 npm run db:seed
 npm run dev:api                               # http://localhost:4000
-npm run dev -w apps/web                       # http://localhost:5173 (proxies /api to :4000)
+npm run dev:hotel       # http://localhost:5171  (each app proxies /api to :4000)
+npm run dev:trips       # http://localhost:5172
+npm run dev:transport   # http://localhost:5173
+npm run dev:club        # http://localhost:5174
+npm run dev:operator    # http://localhost:5175
 ```
 
 Password-reset emails are only written to the API log in development (`src/mail.ts` is a placeholder: plug in SMTP/SES/Resend).
@@ -112,14 +116,20 @@ There are no automated frontend tests. The UI was checked by hand and with a scr
 prisma/                 schema, migrations (init, RLS, system reads), seed, sql/roles.sql
 apps/api/src/           config, db (tenant transaction helper), middleware, modules (auth, suppliers, users, audit, dashboard, media), crud (generic engine), openapi
 apps/api/tests/         vitest + supertest
-apps/web/src/           pages, components, generated/resources.ts
+packages/admin-kit/     shared kit: app shell + layout, UI primitives, generated CRUD pages (generated/resources.ts),
+                        booking modules (list, detail, dialogs, new-booking shell, reports) and the integrations screens
+apps/hotel/             Hotel admin   -> /hotel/      modules: Front desk, Availability, New booking
+apps/trips/             Trips admin   -> /trips/      modules: Departures, New booking
+apps/transport/         Transport     -> /transport/  modules: Dispatch, New booking
+apps/club/              Club admin    -> /club/       modules: Door list, New booking
+apps/operator/          Operator      -> /operator/   modules: Overview, Commission, Integration health, Suppliers
 tools/model-gen/        Python generator: one data model -> Prisma schema, migrations, API and web resource metadata
 docker/, Dockerfile, docker-compose.yml
 ```
 
 ### Changing the data model
 
-The data model lives in `tools/model-gen/spec.py`. `python3 tools/model-gen/gen.py && python3 tools/model-gen/genapi.py && python3 tools/model-gen/genweb.py` regenerates the Prisma schema, the init/RLS migrations and both resource files. That is meant for a new project. **Once a database exists, never edit released migrations**: write a new migration (`prisma migrate dev --create-only`, then add the SQL) and keep `spec.py` in sync. Do not use `prisma db push`: it would drop the check constraints, the overlap constraint and the RLS policies, which Prisma cannot express.
+The data model lives in `tools/model-gen/spec.py`. `python3 tools/model-gen/gen.py && python3 tools/model-gen/genapi.py && python3 tools/model-gen/genweb.py` regenerates the Prisma schema, the init/RLS migrations and both resource files (the web one now lands in `packages/admin-kit/src/generated/`). That is meant for a new project. **Once a database exists, never edit released migrations**: write a new migration (`prisma migrate dev --create-only`, then add the SQL) and keep `spec.py` in sync. Do not use `prisma db push`: it would drop the check constraints, the overlap constraint and the RLS policies, which Prisma cannot express.
 
 ## Known limitations
 

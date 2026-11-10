@@ -1,15 +1,21 @@
-# One image: API + built web app (same origin, so the SameSite=Strict auth cookies work).
+# One image: API + the five built admin apps (same origin, so the SameSite=Strict auth cookies work).
 FROM node:22-bookworm-slim AS build
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
-COPY apps/web/package.json apps/web/
+COPY packages/admin-kit/package.json packages/admin-kit/
+COPY apps/hotel/package.json apps/hotel/
+COPY apps/trips/package.json apps/trips/
+COPY apps/transport/package.json apps/transport/
+COPY apps/club/package.json apps/club/
+COPY apps/operator/package.json apps/operator/
 RUN npm ci
 COPY prisma prisma
 RUN npx prisma generate
 COPY apps apps
-RUN npm run build -w apps/api && npm run build -w apps/web
+COPY packages packages
+RUN npm run build -w apps/api && npm run build:web
 
 FROM node:22-bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates postgresql-client && rm -rf /var/lib/apt/lists/*

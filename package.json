@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "workspaces": [
+    "packages/*",
     "apps/*"
   ],
   "scripts": {
@@ -15,7 +16,14 @@
     "build:api": "npm run build -w apps/api",
     "test:api": "npm run test -w apps/api",
     "db:seed:bookings": "tsx prisma/seed-bookings.ts",
-    "gen:bookings": "python3 tools/model-gen/bookings.py"
+    "gen:bookings": "python3 tools/model-gen/bookings.py",
+    "build:web": "npm run build -w apps/hotel -w apps/trips -w apps/transport -w apps/club -w apps/operator",
+    "dev:hotel": "npm run dev -w apps/hotel",
+    "dev:trips": "npm run dev -w apps/trips",
+    "dev:transport": "npm run dev -w apps/transport",
+    "dev:club": "npm run dev -w apps/club",
+    "dev:operator": "npm run dev -w apps/operator",
+    "typecheck:web": "npm run typecheck -w apps/hotel -w apps/trips -w apps/transport -w apps/club -w apps/operator"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -24,7 +24,8 @@ apps/api/src/
   modules/
     auth/ users/ suppliers/ shared/ (countries, cities, currencies, amenities, categories, taxes, policies, media)
     hotel/ trips/ transport/ club/ audit/ dashboard/ import-export/
-apps/web/src/        pages per module, route guards, supplier switcher
+packages/admin-kit/  shared admin kit: shell, layout, UI, generated CRUD pages, booking + integration modules
+apps/hotel|trips|transport|club|operator/   one Vite app per product, each with its own src/modules
 prisma/              schema.prisma, migrations/, seed.ts, sql/roles.sql
 ```
 
@@ -69,13 +70,23 @@ Every master-data resource has: `GET /`, `POST /`, `GET /:id`, `PATCH|PUT /:id`,
 
 `/api/v1/<module>/<entity>` with GET list, GET :id, POST, PATCH :id, DELETE :id (soft delete), plus `POST :id/restore`, `PATCH :id/status` and bulk endpoints. Response envelope: `{ success, data, message, errors, meta: { page, limit, total } }`. OpenAPI generated from the zod schemas. Every mutation writes an `audit_logs` row (before/after JSON) in the same transaction.
 
-## 4b. Frontend (apps/web)
+## 4b. Frontend (packages/admin-kit + five apps)
 
-React 18 + Vite + TypeScript + Tailwind, with shadcn/ui-style components written locally (`components/ui`, Tailwind + class-variance-authority; no Radix dependency). Server state with TanStack Query, routing with React Router, toasts with sonner.
+Five separate Vite apps share one kit. Each app is a folder with its own `index.html`, `vite.config.ts` (base `/<app>/`), `app.config.tsx` (title, sidebar, routes) and `src/modules/*` for the screens only that product needs. The kit (`@booking/admin-kit`, source-only, no build step) holds everything shared. The API mounts each built app at `/hotel/`, `/trips/`, `/transport/`, `/club/` and `/operator/` and serves a small landing page at `/`.
 
-- **Metadata-driven pages.** `src/generated/resources.ts` is generated from the same data model as the API. One list page, one form, one detail drawer and the amenity/gallery editors render all 29 master-data entities, so a model change means regenerating, not hand-editing 29 screens. Suppliers, users, audit log, media library, dashboard and account are hand-written pages.
+| App | Own modules | Shared from the kit |
+|---|---|---|
+| Hotel | Front desk (arrivals, in house, departures, occupancy), Availability, New booking | Bookings list + detail, Customers, Payments, Reports, Integrations, CRUD for hotel and shared data |
+| Trips | Departures with manifest, New booking | same |
+| Transport | Dispatch (assign, move jobs along), New booking (service or zone to zone) | same |
+| Club | Door list with check-in, New booking (ticket or table) | same |
+| Operator | Overview, Integration health | all bookings, Reports with commission, Suppliers, Users, Audit log, CRUD for every group |
+
+React 18 + Vite + TypeScript + Tailwind (one shared preset), shadcn/ui-style components written locally (`components/ui`, Tailwind + class-variance-authority; no Radix dependency). Server state with TanStack Query, routing with React Router (basename from the Vite base), toasts with sonner. `mountApp(config)` boots an app; `AppConfig` is the only thing an app has to describe.
+
+- **Metadata-driven pages.** `packages/admin-kit/src/generated/resources.ts` is generated from the same data model as the API. One list page, one form, one detail drawer and the amenity/gallery editors render all 29 master-data entities, so a model change means regenerating, not hand-editing 29 screens. Suppliers, users, audit log, media library, dashboard and account are hand-written pages.
 - **Session.** The access token lives only in memory; the refresh cookie is httpOnly. On a page reload the app calls `/auth/refresh` (with the CSRF header) to restore the session. A 401 triggers one automatic refresh and retry.
-- **Same origin in production.** The refresh and CSRF cookies are `SameSite=Strict`, so serve the web app and `/api` from one origin (reverse proxy), or the browser will not send them. `CORS_ORIGIN` must list the exact origin(s) users open, including `127.0.0.1` vs `localhost`.
+- **Same origin in production.** The refresh and CSRF cookies are `SameSite=Strict`, so serve the apps and `/api` from one origin (reverse proxy or the included image). One login then works in all five apps, or the browser will not send them. `CORS_ORIGIN` must list the exact origin(s) users open, including `127.0.0.1` vs `localhost`.
 - **Route guards.** `RequireAuth` (and forced password change for temporary passwords) and `RequireRole`; buttons the role may not use are hidden, and the API still enforces everything.
 - **SUPER_ADMIN supplier switcher** sets `X-Supplier-Id` on every request and clears cached data. Creating tenant data requires choosing a supplier first.
 - **Accessibility/responsive.** Labelled fields, `aria-invalid` + inline errors, keyboard-operable dialogs (Esc closes), sortable column headers with `aria-sort`, mobile slide-over navigation, dark/light mode.

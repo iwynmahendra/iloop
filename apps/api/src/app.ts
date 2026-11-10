@@ -9,6 +9,9 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import swaggerUi from 'swagger-ui-express';
 import { config } from './config.js';
+
+const WEB_APPS = ['hotel', 'trips', 'transport', 'club', 'operator'] as const;
+const APP_LABEL: Record<string, string> = { hotel: 'Hotel admin', trips: 'Trips admin', transport: 'Transport admin', club: 'Club admin', operator: 'Operator console' };
 import { errorHandler, notFound } from './http.js';
 import { logger } from './logger.js';
 import { authenticate, notStaff } from './middleware/auth.js';
@@ -64,11 +67,24 @@ export function createApp() {
   app.use('/api/v1', v1);
 
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(undefined, { swaggerUrl: '/api/v1/openapi.json' }));
-  // Single-container deployment: serve the built web app from the same origin (cookies are SameSite=Strict).
-  const webDist = path.resolve(process.env.WEB_DIST ?? 'apps/web/dist');
-  if (fs.existsSync(path.join(webDist, 'index.html'))) {
-    app.use(express.static(webDist, { index: false, maxAge: '1h', setHeaders: (res, p) => { if (p.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); } }));
-    app.get(/^\/(?!api\/|uploads\/|assets\/)(?!.*\.[A-Za-z0-9]+$).*/, (_req, res) => { res.sendFile(path.join(webDist, 'index.html')); });
+  // Single-container deployment: serve every built admin app from the same origin (the auth cookies are SameSite=Strict).
+  // Each app lives in apps/<key>/dist and is mounted at /<key>/. WEB_ROOT is the folder that holds the app folders.
+  const webRoot = path.resolve(process.env.WEB_ROOT ?? 'apps');
+  const mounted: string[] = [];
+  for (const key of WEB_APPS) {
+    const dist = path.join(webRoot, key, 'dist');
+    if (!fs.existsSync(path.join(dist, 'index.html'))) continue;
+    mounted.push(key);
+    app.use(`/${key}`, express.static(dist, { index: false, maxAge: '1h', setHeaders: (res, p) => { if (p.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); } }));
+    // client-side routes: anything under /<key> without a file extension gets the app shell
+    app.get(new RegExp(`^/${key}(?:/(?!.*\\.[A-Za-z0-9]+$).*)?$`), (_req, res) => { res.sendFile(path.join(dist, 'index.html')); });
+  }
+  if (mounted.length) {
+    app.get('/', (_req, res) => {
+      res.type('html').send(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Booking platform</title>
+<style>body{font:16px system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#f5f6f8;color:#1b2230}main{padding:2rem;max-width:30rem;width:100%}a{display:block;padding:.9rem 1rem;margin:.5rem 0;background:#fff;border:1px solid #d9dde5;border-radius:.6rem;color:inherit;text-decoration:none}a:hover{border-color:#2c4fd6}small{color:#667}</style>
+<main><h1>Booking platform</h1>${mounted.map((k) => `<a href="/${k}/">${APP_LABEL[k]}<br><small>/${k}/</small></a>`).join('')}<a href="/api/docs">API documentation<br><small>/api/docs</small></a></main>`);
+    });
   }
   app.use((_req, _res, next) => next(notFound('Route not found')));
   app.use(errorHandler);

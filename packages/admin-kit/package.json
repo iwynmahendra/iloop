@@ -1,0 +1,16 @@
+{
+  "name": "@booking/admin-kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared admin shell, UI primitives, generated CRUD pages and booking/integration modules used by every admin app.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": { ".": "./src/index.ts", "./index.css": "./src/index.css", "./tailwind.preset": "./tailwind.preset.cjs" },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.62.0", "react": "^18.3.1", "react-dom": "^18.3.1", "react-router-dom": "^6.28.0"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1", "clsx": "^2.1.1", "lucide-react": "^0.460.0", "sonner": "^1.7.0", "tailwind-merge": "^2.5.5"
+  }
+}

@@ -5,7 +5,7 @@ with contextlib.redirect_stdout(io.StringIO()):
 exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'genapi.py')).read().split("out = []")[0].split("from gen import *")[1].replace("   # re-runs the (deterministic) schema generation, gives us M with parsed fields",""))
 import os
 api = json.load(open('/dev/stdin')) if False else None
-OUT=ROOT + '/apps/web/src/generated/resources.ts'
+OUT=ROOT + '/packages/admin-kit/src/generated/resources.ts'
 src=open(ROOT + '/apps/api/src/crud/resources.generated.ts').read()
 data=json.loads(src[src.index('= [')+2:src.rindex(';')])
 def human(s): 
