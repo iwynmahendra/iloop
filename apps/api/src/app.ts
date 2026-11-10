@@ -10,11 +10,13 @@ import { pinoHttp } from 'pino-http';
 import swaggerUi from 'swagger-ui-express';
 import { config } from './config.js';
 
-const WEB_APPS = ['hotel', 'trips', 'transport', 'club', 'operator'] as const;
-const APP_LABEL: Record<string, string> = { hotel: 'Hotel admin', trips: 'Trips admin', transport: 'Transport admin', club: 'Club admin', operator: 'Operator console' };
+const WEB_APPS = ['hotel', 'trips', 'transport', 'club', 'operator', 'ops', 'guest'] as const;
+const APP_LABEL: Record<string, string> = { hotel: 'Hotel admin', trips: 'Trips admin', transport: 'Transport admin', club: 'Club admin', operator: 'Operator console', ops: 'Ops board (staff)', guest: 'Guest concierge' };
 import { errorHandler, notFound } from './http.js';
 import { logger } from './logger.js';
 import { authenticate, notStaff } from './middleware/auth.js';
+import { opsRouter } from './ops/router.js';
+import { guestRouter } from './ops/guest.js';
 import { crudRouter } from './crud/router.js';
 import { resources } from './crud/resources.generated.js';
 import { authRouter } from './modules/auth.js';
@@ -48,7 +50,8 @@ export function createApp() {
 
   const v1 = Router();
   v1.use('/auth', authRouter);
-  v1.use(inboundRouter); // public, signed: providers tell us about reservations and rooms
+  v1.use(inboundRouter);
+  v1.use(guestRouter); // guest app: its own sign-in and token, before the staff auth below // public, signed: providers tell us about reservations and rooms
   v1.get('/openapi.json', (_req, res) => { res.json(buildOpenApi()); });
 
   const secured = Router();
@@ -58,6 +61,7 @@ export function createApp() {
   secured.use('/audit-logs', auditRouter);
   secured.use('/dashboard', dashboardRouter);
   secured.use((req, res, next) => (/^\/(integrations|integration-events|api-keys|webhooks)(\/|$)/.test(req.path) ? notStaff(req, res, next) : next())); // these four are admin only
+  secured.use(opsRouter);
   secured.use(integrationsRouter);
   secured.use(pmsReadRouter); // the PMS mirror: Front desk and Rooms read it
   secured.use(bookingRouter); // bookings, customers, payments, availability, boards, reports

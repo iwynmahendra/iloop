@@ -8,6 +8,6 @@ export interface Scope {
 }
 declare global {
   namespace Express {
-    interface Request { auth?: AuthUser; scope?: Scope; requestId?: string; rawBody?: Buffer }
+    interface Request { auth?: AuthUser; scope?: Scope; requestId?: string; rawBody?: Buffer; guest?: import('./ops/guest.js').GuestCtx }
   }
 }

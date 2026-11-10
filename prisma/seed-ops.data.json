@@ -1,0 +1,204 @@
+{
+ "kb": [
+  {
+   "title": "Spa price list",
+   "category": "General",
+   "body": "Serene Spa treatment prices\nAromatherapy massage 60 minutes costs Rp 650,000. Couples massage 60 minutes costs Rp 1,200,000 per couple. A foot reflexology session of 30 minutes costs Rp 300,000.\n\nSpa rules\nGuests under 16 need a parent in the room. Please tell the therapist about pregnancy, allergies or injuries. Cancel at least 4 hours before the treatment to avoid a charge."
+  },
+  {
+   "title": "Pool and beach rules",
+   "category": "Facilities",
+   "body": "Pool rules\nThe infinity pool is open 07:00 to 20:00. There is no lifeguard on duty at the infinity pool, so children must be supervised. Glass is not allowed in the pool area. Please shower before entering.\n\nBeach\nThe beach is public. Hotel loungers are free for guests until 18:00. Swimming is safe between the red and yellow flags only. Please do not swim when the red flag is up."
+  },
+  {
+   "title": "Cancellation and refund policy",
+   "category": "Policies",
+   "body": "Room bookings\nFlexible rates can be cancelled free of charge up to 48 hours before check-in. After that the first night is charged. Non-refundable rates are not refunded.\n\nTrips and transport\nTrips and transfers can be cancelled free up to 24 hours before pickup. Within 24 hours the full price is charged.\n\nRefunds\nRefunds go back to the original payment method within 7 to 14 working days."
+  },
+  {
+   "title": "Nearby guide",
+   "category": "Local guide",
+   "body": "Money\nThe nearest ATM is at the Jalan Raya shop, a 5 minute walk. The front desk can change cash at the daily rate.\n\nHealth\nThe nearest pharmacy is Apotek Sehat, 800 metres away, open 08:00 to 22:00. The nearest clinic is Bali Care Clinic, 10 minutes by car. In an emergency dial 0 from your room.\n\nGetting around\nA metered taxi to the airport takes about 45 minutes. Please ask the front desk to call a trusted driver."
+  },
+  {
+   "title": "Pets and children policy",
+   "category": "Policies",
+   "body": "Pets\nPets are not allowed in the rooms or restaurants. Service animals are welcome with advance notice. We can recommend a nearby pet hotel.\n\nChildren\nChildren under 6 stay free in existing beds. An extra bed costs Rp 350,000 per night and a baby cot is free. The kids club accepts ages 4 to 12, and parents must stay on site."
+  },
+  {
+   "title": "Events and weddings guide",
+   "category": "Events",
+   "body": "Weddings and private events\nWe host beach weddings for up to 80 guests. Packages start from Rp 85,000,000 and include decoration, a celebrant and a dinner. Please contact the events team at least 90 days ahead.\n\nPrivate dinners\nA private beach dinner for two can be arranged with 24 hours notice."
+  },
+  {
+   "title": "Dress code and quiet hours",
+   "category": "Policies",
+   "body": "Dress code\nSwimwear is for the pool and beach only. The Garden Restaurant is smart casual in the evening. Please wear a cover-up in the lobby.\n\nQuiet hours\nQuiet hours are 22:00 to 07:00. The beach club may play music until 23:00 on event days."
+  }
+ ],
+ "menu": [
+  {
+   "category": "Breakfast",
+   "name": "Nasi goreng",
+   "price": 95000,
+   "description": "Fried rice, fried egg and chicken satay",
+   "tags": [
+    "Popular",
+    "Spicy"
+   ],
+   "sortOrder": 0
+  },
+  {
+   "category": "Breakfast",
+   "name": "Pancakes with fruit",
+   "price": 75000,
+   "description": "Palm sugar syrup and seasonal fruit",
+   "tags": [
+    "Vegetarian"
+   ],
+   "sortOrder": 1
+  },
+  {
+   "category": "Breakfast",
+   "name": "Fruit platter",
+   "price": 65000,
+   "description": "Tropical fruit with lime and mint",
+   "tags": [
+    "Vegan"
+   ],
+   "sortOrder": 2
+  },
+  {
+   "category": "Breakfast",
+   "name": "Eggs your way",
+   "price": 85000,
+   "description": "Two eggs, toast and grilled tomato",
+   "tags": [
+    "Vegetarian"
+   ],
+   "sortOrder": 3
+  },
+  {
+   "category": "Indonesian",
+   "name": "Mie goreng",
+   "price": 90000,
+   "description": "Wok-fried noodles, vegetables and egg",
+   "tags": [
+    "Spicy"
+   ],
+   "sortOrder": 4
+  },
+  {
+   "category": "Indonesian",
+   "name": "Chicken satay",
+   "price": 105000,
+   "description": "Grilled skewers with peanut sauce",
+   "tags": [
+    "Popular"
+   ],
+   "sortOrder": 5
+  },
+  {
+   "category": "Indonesian",
+   "name": "Beef rendang",
+   "price": 165000,
+   "description": "Slow-cooked beef in coconut and spices",
+   "tags": [
+    "Spicy"
+   ],
+   "sortOrder": 6
+  },
+  {
+   "category": "Indonesian",
+   "name": "Gado-gado",
+   "price": 80000,
+   "description": "Vegetables, tofu and tempeh in peanut dressing",
+   "tags": [
+    "Vegetarian"
+   ],
+   "sortOrder": 7
+  },
+  {
+   "category": "Western",
+   "name": "Club sandwich",
+   "price": 110000,
+   "description": "Chicken, bacon, egg and fries",
+   "tags": [],
+   "sortOrder": 8
+  },
+  {
+   "category": "Western",
+   "name": "Margherita pizza",
+   "price": 120000,
+   "description": "Tomato, mozzarella and fresh basil",
+   "tags": [
+    "Vegetarian"
+   ],
+   "sortOrder": 9
+  },
+  {
+   "category": "Western",
+   "name": "Grilled fish, sambal matah",
+   "price": 185000,
+   "description": "Catch of the day with steamed rice",
+   "tags": [
+    "Popular"
+   ],
+   "sortOrder": 10
+  },
+  {
+   "category": "Western",
+   "name": "Caesar salad",
+   "price": 90000,
+   "description": "Romaine, parmesan and croutons",
+   "tags": [],
+   "sortOrder": 11
+  },
+  {
+   "category": "Desserts",
+   "name": "Chocolate lava cake",
+   "price": 85000,
+   "description": "Warm chocolate cake with vanilla ice cream",
+   "tags": [
+    "Vegetarian"
+   ],
+   "sortOrder": 12
+  },
+  {
+   "category": "Desserts",
+   "name": "Black rice pudding",
+   "price": 60000,
+   "description": "Coconut milk and palm sugar",
+   "tags": [
+    "Vegan"
+   ],
+   "sortOrder": 13
+  },
+  {
+   "category": "Drinks",
+   "name": "Fresh coffee",
+   "price": 40000,
+   "description": "Bali arabica, black or white",
+   "tags": [],
+   "sortOrder": 14
+  },
+  {
+   "category": "Drinks",
+   "name": "Fresh juice",
+   "price": 45000,
+   "description": "Watermelon, orange or pineapple",
+   "tags": [
+    "Vegan"
+   ],
+   "sortOrder": 15
+  },
+  {
+   "category": "Drinks",
+   "name": "Bintang beer",
+   "price": 55000,
+   "description": "Cold, 330 ml",
+   "tags": [],
+   "sortOrder": 16
+  }
+ ]
+}

@@ -45,7 +45,14 @@ This starts PostgreSQL, applies the migrations, loads the demo seed (`RUN_SEED=f
 3. In the SQL editor, run `prisma/sql/roles.sql` after changing the password. This creates `app_runtime`.
 4. Run the API with `DATABASE_URL` = the **pooled** URL for `app_runtime` (`...:6543/postgres?pgbouncer=true`). Never use the `postgres` role at runtime: it can bypass row level security.
 5. Seed once if you want demo data: `DIRECT_URL=<direct url> npm run db:seed`. For a real launch, create only the super admin instead (edit `prisma/seed.ts` or insert the user yourself).
-6. Serve the admin apps and `/api` from the **same origin** (the included image does this: the API mounts each app at `/hotel/`, `/trips/`, `/transport/`, `/club/`, `/operator/` from `apps/<name>/dist`; `WEB_ROOT` changes the folder). One login works in all five because the session cookies are shared on the origin. Set `COOKIE_SECURE=true`, `CORS_ORIGIN` to the public URL, `TRUST_PROXY=1` behind one proxy, and a long random `JWT_ACCESS_SECRET`.
+6. Serve the admin apps and `/api` from the **same origin** (the included image does this: the API mounts each app at `/hotel/`, `/trips/`, `/transport/`, `/club/`, `/operator/`, `/ops/`, `/guest/` from `apps/<name>/dist`; `WEB_ROOT` changes the folder). One login works in all five because the session cookies are shared on the origin. Set `COOKIE_SECURE=true`, `CORS_ORIGIN` to the public URL, `TRUST_PROXY=1` behind one proxy, and a long random `JWT_ACCESS_SECRET`.
+
+### Ops board and Guest concierge
+
+- `apps/ops` (staff, `/ops/`) uses the admin shell and the same login. API: `/api/v1/ops/*` (tasks, guest requests with SLA, rooms, room dining, knowledge base, staff, shift notes, overview alerts).
+- `apps/guest` (guests, `/guest/`) is a separate mobile app. A guest signs in with booking number + last name; the booking must be CONFIRMED and between the day before check-in and check-out (SQL function `guest_find_stay`). The token (`GUEST_TOKEN_HOURS`, default 12) only works on `/api/v1/guest/*`. Requests and orders need a room number, so check the guest in first.
+- Assistant: set `ANTHROPIC_API_KEY` (and optionally `ASSISTANT_MODEL`) to answer in the guest's language from the hotel's knowledge base. Without the key it falls back to keyword search over the same documents. Voice uses the browser's Web Speech API (Chrome, Edge, Safari; not Firefox).
+- After pulling this change run `npx prisma migrate deploy`, re-run `prisma/sql/roles.sql`, then `npm run db:seed:ops` for demo staff, rooms, menu and knowledge documents.
 
 ## Local development (without Docker)
 
@@ -61,6 +68,8 @@ npm run dev:trips       # http://localhost:5172
 npm run dev:transport   # http://localhost:5173
 npm run dev:club        # http://localhost:5174
 npm run dev:operator    # http://localhost:5175
+npm run dev:ops         # http://localhost:5176  staff Ops board
+npm run dev:guest       # http://localhost:5177  guest concierge (needs a checked-in booking)
 ```
 
 Password-reset emails are only written to the API log in development (`src/mail.ts` is a placeholder: plug in SMTP/SES/Resend).
@@ -123,6 +132,8 @@ apps/trips/             Trips admin   -> /trips/      modules: Departures, New b
 apps/transport/         Transport     -> /transport/  modules: Dispatch, New booking
 apps/club/              Club admin    -> /club/       modules: Door list, New booking
 apps/operator/          Operator      -> /operator/   modules: Overview, Commission, Integration health, Suppliers
+apps/ops/               Ops board     -> /ops/        modules: Overview, Tasks, Guest requests, Rooms, Room dining, Knowledge base, Team & handover
+apps/guest/             Guest app     -> /guest/      standalone mobile app (no admin shell): sign-in with booking number + last name, services, room dining, assistant with voice
 tools/model-gen/        Python generator: one data model -> Prisma schema, migrations, API and web resource metadata
 docker/, Dockerfile, docker-compose.yml
 ```

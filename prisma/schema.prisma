@@ -144,6 +144,13 @@ model Supplier {
   emailOutbox             EmailOutbox[]            @relation("EmailOutbox_supplier")
   integrationConnections  IntegrationConnection[] @relation("IntegrationConnection_supplier")
   webhookEndpoints        WebhookEndpoint[]        @relation("WebhookEndpoint_supplier")
+  opsStaff OpsStaff[] @relation("OpsStaff_supplier")
+  opsRooms OpsRoom[] @relation("OpsRoom_supplier")
+  opsTasks OpsTask[] @relation("OpsTask_supplier")
+  diningItems DiningItem[] @relation("DiningItem_supplier")
+  diningOrders DiningOrder[] @relation("DiningOrder_supplier")
+  kbDocs KbDoc[] @relation("KbDoc_supplier")
+  shiftNotes ShiftNote[] @relation("ShiftNote_supplier")
   apiKeys                 ApiKey[]                 @relation("ApiKey_supplier")
   cities                  City[]                   @relation("City_supplier")
   amenities               Amenity[]                @relation("Amenity_supplier")
@@ -2023,3 +2030,125 @@ model PmsRoomState {
   @@map("pms_room_state")
 }
 // ==== END INTEGRATIONS ====
+
+model OpsStaff {
+  id         String   @id(map: "ops_staff_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String   @db.Uuid @map("supplier_id")
+  name       String   @db.VarChar(80)
+  department String   @db.VarChar(30)
+  onDuty     Boolean  @default(true) @map("on_duty")
+  createdAt  DateTime @db.Timestamptz(6) @default(now()) @map("created_at")
+  supplier Supplier @relation("OpsStaff_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "ops_staff_supplier_id_fkey")
+  tasks OpsTask[] @relation("OpsTask_assignee")
+  @@unique([supplierId, id], map: "ops_staff_supplier_id_id_key")
+  @@map("ops_staff")
+}
+
+model OpsRoom {
+  id         String   @id(map: "ops_room_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String   @db.Uuid @map("supplier_id")
+  roomNumber String   @db.VarChar(20) @map("room_number")
+  floor      String?  @db.VarChar(10)
+  status     String   @default("CLEAN") @db.VarChar(20)
+  dnd        Boolean  @default(false)
+  notes      String?  @db.VarChar(300)
+  updatedAt  DateTime @db.Timestamptz(6) @default(now()) @map("updated_at")
+  supplier Supplier @relation("OpsRoom_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "ops_room_supplier_id_fkey")
+  @@unique([supplierId, roomNumber], map: "ops_room_supplier_id_room_number_key")
+  @@map("ops_room")
+}
+
+model OpsTask {
+  id          String    @id(map: "ops_task_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId  String    @db.Uuid @map("supplier_id")
+  kind        String    @default("TASK") @db.VarChar(10)
+  ref         String?   @db.VarChar(20)
+  title       String    @db.VarChar(200)
+  department  String    @db.VarChar(30)
+  priority    String    @default("NORMAL") @db.VarChar(10)
+  status      String    @default("TODO") @db.VarChar(12)
+  assigneeId  String?   @db.Uuid @map("assignee_id")
+  roomNumber  String?   @db.VarChar(20) @map("room_number")
+  guestName   String?   @db.VarChar(150) @map("guest_name")
+  requestType String?   @db.VarChar(60) @map("request_type")
+  details     Json      @default("{}")
+  notes       String?   @db.VarChar(1000)
+  vip         Boolean   @default(false)
+  bookingId   String?   @db.Uuid @map("booking_id")
+  source      String    @default("STAFF") @db.VarChar(20)
+  dueAt       DateTime? @db.Timestamptz(6) @map("due_at")
+  doneAt      DateTime? @db.Timestamptz(6) @map("done_at")
+  log         Json      @default("[]")
+  createdBy   String?   @db.VarChar(80) @map("created_by")
+  createdAt   DateTime  @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt   DateTime  @db.Timestamptz(6) @default(now()) @map("updated_at")
+  supplier Supplier  @relation("OpsTask_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "ops_task_supplier_id_fkey")
+  assignee OpsStaff? @relation("OpsTask_assignee", fields: [supplierId, assigneeId], references: [supplierId, id], onDelete: Restrict, onUpdate: Cascade, map: "ops_task_supplier_id_assignee_id_fkey")
+  @@unique([supplierId, id], map: "ops_task_supplier_id_id_key")
+  @@unique([supplierId, ref], map: "ops_task_supplier_id_ref_key")
+  @@index([supplierId, status], map: "ops_task_supplier_id_status_idx")
+  @@index([supplierId, bookingId], map: "ops_task_supplier_id_booking_id_idx")
+  @@map("ops_task")
+}
+
+model DiningItem {
+  id          String   @id(map: "dining_item_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId  String   @db.Uuid @map("supplier_id")
+  category    String   @db.VarChar(40)
+  name        String   @db.VarChar(120)
+  description String?  @db.VarChar(300)
+  price       Decimal  @db.Decimal(14, 2)
+  tags        String[] @default([])
+  available   Boolean  @default(true)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @db.Timestamptz(6) @default(now()) @map("created_at")
+  supplier Supplier @relation("DiningItem_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "dining_item_supplier_id_fkey")
+  @@unique([supplierId, id], map: "dining_item_supplier_id_id_key")
+  @@map("dining_item")
+}
+
+model DiningOrder {
+  id           String   @id(map: "dining_order_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId   String   @db.Uuid @map("supplier_id")
+  ref          String   @db.VarChar(20)
+  bookingId    String?  @db.Uuid @map("booking_id")
+  roomNumber   String   @db.VarChar(20) @map("room_number")
+  guestName    String?  @db.VarChar(150) @map("guest_name")
+  items        Json
+  total        Decimal  @db.Decimal(14, 2)
+  currencyCode String   @default("IDR") @db.Char(3) @map("currency_code")
+  note         String?  @db.VarChar(500)
+  deliverWhen  String   @default("ASAP") @db.VarChar(30) @map("deliver_when")
+  status       String   @default("NEW") @db.VarChar(12)
+  createdAt    DateTime @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt    DateTime @db.Timestamptz(6) @default(now()) @map("updated_at")
+  supplier Supplier @relation("DiningOrder_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "dining_order_supplier_id_fkey")
+  @@unique([supplierId, ref], map: "dining_order_supplier_id_ref_key")
+  @@index([supplierId, status], map: "dining_order_supplier_id_status_idx")
+  @@map("dining_order")
+}
+
+model KbDoc {
+  id         String   @id(map: "kb_doc_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String   @db.Uuid @map("supplier_id")
+  title      String   @db.VarChar(160)
+  category   String   @default("General") @db.VarChar(40)
+  body       String
+  active     Boolean  @default(true)
+  createdAt  DateTime @db.Timestamptz(6) @default(now()) @map("created_at")
+  updatedAt  DateTime @db.Timestamptz(6) @default(now()) @map("updated_at")
+  supplier Supplier @relation("KbDoc_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "kb_doc_supplier_id_fkey")
+  @@unique([supplierId, id], map: "kb_doc_supplier_id_id_key")
+  @@map("kb_doc")
+}
+
+model ShiftNote {
+  id         String   @id(map: "shift_note_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId String   @db.Uuid @map("supplier_id")
+  author     String   @db.VarChar(80)
+  body       String   @db.VarChar(2000)
+  createdAt  DateTime @db.Timestamptz(6) @default(now()) @map("created_at")
+  supplier Supplier @relation("ShiftNote_supplier", fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "shift_note_supplier_id_fkey")
+  @@index([supplierId, createdAt], map: "shift_note_supplier_id_created_at_idx")
+  @@map("shift_note")
+}

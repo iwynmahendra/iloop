@@ -36,6 +36,10 @@ const schema = z.object({
   EMAIL_SEND_SECONDS: z.coerce.number().int().min(0).default(10),
   /** Integrations: webhook secrets are derived from this key (falls back to the JWT secret), and how often the worker runs (0 = off). */
   WEBHOOK_MASTER_KEY: z.string().min(32).optional(),
+  /** Optional. Without it the guest assistant answers by searching the hotel's documents only. */
+  ANTHROPIC_API_KEY: z.preprocess((v) => (v === '' ? undefined : v), z.string().min(10).optional()),
+  ASSISTANT_MODEL: z.string().default('claude-sonnet-5-5'),
+  GUEST_TOKEN_HOURS: z.coerce.number().int().min(1).max(72).default(12),
   INTEGRATION_WORKER_SECONDS: z.coerce.number().int().min(0).default(15),
   HOLD_SWEEP_SECONDS: z.coerce.number().int().min(0).default(60), // 0 = sweeper off
   BOOKING_TZ_OFFSET_MINUTES: z.coerce.number().int().default(480), // Bali (UTC+8): where "today" starts for boards and cut-offs

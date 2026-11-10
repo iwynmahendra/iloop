@@ -10,6 +10,8 @@ COPY apps/trips/package.json apps/trips/
 COPY apps/transport/package.json apps/transport/
 COPY apps/club/package.json apps/club/
 COPY apps/operator/package.json apps/operator/
+COPY apps/ops/package.json apps/ops/
+COPY apps/guest/package.json apps/guest/
 RUN npm ci
 COPY prisma prisma
 RUN npx prisma generate

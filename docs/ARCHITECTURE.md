@@ -70,9 +70,9 @@ Every master-data resource has: `GET /`, `POST /`, `GET /:id`, `PATCH|PUT /:id`,
 
 `/api/v1/<module>/<entity>` with GET list, GET :id, POST, PATCH :id, DELETE :id (soft delete), plus `POST :id/restore`, `PATCH :id/status` and bulk endpoints. Response envelope: `{ success, data, message, errors, meta: { page, limit, total } }`. OpenAPI generated from the zod schemas. Every mutation writes an `audit_logs` row (before/after JSON) in the same transaction.
 
-## 4b. Frontend (packages/admin-kit + five apps)
+## 4b. Frontend (packages/admin-kit + seven apps)
 
-Five separate Vite apps share one kit. Each app is a folder with its own `index.html`, `vite.config.ts` (base `/<app>/`), `app.config.tsx` (title, sidebar, routes) and `src/modules/*` for the screens only that product needs. The kit (`@booking/admin-kit`, source-only, no build step) holds everything shared. The API mounts each built app at `/hotel/`, `/trips/`, `/transport/`, `/club/` and `/operator/` and serves a small landing page at `/`.
+Seven Vite apps; five admin apps plus the staff Ops board share one kit, and the guest app is standalone (own tiny client, guest token, no admin shell). Each app is a folder with its own `index.html`, `vite.config.ts` (base `/<app>/`), `app.config.tsx` (title, sidebar, routes) and `src/modules/*` for the screens only that product needs. The kit (`@booking/admin-kit`, source-only, no build step) holds everything shared. The API mounts each built app at `/hotel/`, `/trips/`, `/transport/`, `/club/` and `/operator/` and serves a small landing page at `/`.
 
 | App | Own modules | Shared from the kit |
 |---|---|---|
