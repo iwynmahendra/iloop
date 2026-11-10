@@ -23,16 +23,17 @@ function useAsync<T>(path: string | null, deps: unknown[] = []) {
 }
 
 function SignIn({ onDone }: { onDone: () => void }) {
-  const [bookingNo, setB] = useState(''); const [lastName, setL] = useState(''); const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
+  const [bookingNo, setB] = useState(''); const [lastName, setL] = useState(''); const [email, setE] = useState(''); const [needEmail, setNeed] = useState(false); const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
   async function go(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setErr('');
-    try { const r = await call<{ token: string }>('/auth', { method: 'POST', body: { bookingNo: bookingNo.trim(), lastName: lastName.trim() } }); setToken(r.token); onDone(); }
-    catch (x) { setErr((x as Error).message); } finally { setBusy(false); }
+    try { const r = await call<{ token: string }>('/auth', { method: 'POST', body: { bookingNo: bookingNo.trim(), lastName: lastName.trim(), ...(email.trim() ? { email: email.trim() } : {}) } }); setToken(r.token); onDone(); }
+    catch (x) { if ((x as ApiError).status === 409) setNeed(true); setErr((x as Error).message); } finally { setBusy(false); }
   }
   return <main className="signin"><div className="brand">Guest concierge</div><h1>Welcome</h1><p className="muted">Sign in with your booking number and last name to order, ask for help or find out about the hotel.</p>
     <form onSubmit={go} className="stack">
       <label>Booking number<input autoFocus autoComplete="off" autoCapitalize="characters" value={bookingNo} onChange={(e) => setB(e.target.value)} placeholder="e.g. BK-2611-AB12" required minLength={4} /></label>
       <label>Last name<input autoComplete="family-name" value={lastName} onChange={(e) => setL(e.target.value)} required minLength={2} /></label>
+      {needEmail && <label>Email used for the booking<input type="email" autoComplete="email" value={email} onChange={(e) => setE(e.target.value)} required /></label>}
       {err && <p role="alert" className="error">{err}</p>}
       <button className="primary" disabled={busy}>{busy ? 'Checking…' : 'Sign in'}</button>
     </form><p className="muted small">Your booking number is in your confirmation email. Sign-in works from the day before you arrive until you check out.</p></main>;

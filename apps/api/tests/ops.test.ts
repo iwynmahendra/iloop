@@ -1,6 +1,7 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { config } from '../src/config.js';
 import { searchKb } from '../src/ops/kb.js';
+import { withDb } from '../src/db.js';
 import { api, bearer, login, SEED_PASSWORD, uniq, type Session } from './helpers.js';
 
 let ubud: Session, ubudStaff: Session, semi: Session;
@@ -70,9 +71,11 @@ describe('tasks, staff and rooms', () => {
 });
 
 describe('guest app', () => {
-  let bookingNo: string, bookingId: string, token: string, itemId: string, foreign: string;
+  let bookingNo: string, bookingId: string, token: string, itemId: string, foreign: string, foreignId: string;
   const gp = (url: string, body: object = {}, t = token) => api().post('/api/v1/guest' + url).set(guest(t)).send(body);
   const gg = (url: string, t = token) => api().get('/api/v1/guest' + url).set(guest(t));
+  // these stays use today's rooms; release them so repeated runs do not use up the demo inventory
+  afterAll(async () => { for (const [s, id] of [[ubud, bookingId], [semi, foreignId]] as const) if (id) await P(s, `/bookings/${id}/cancel`, { reason: 'test cleanup' }); });
   it('sets up an in-stay hotel booking', async () => {
     const rt = (await G(ubud, '/hotel/room-types', { limit: 1 })).body.data[0];
     const b = await P(ubud, '/bookings', { product: 'HOTEL', roomTypeId: rt.id, checkIn: day(0), checkOut: day(1), rooms: 1, adults: 1, guestName: 'Ayu Gunawan', guestEmail: 'ayu@example.test', confirm: true });
@@ -80,7 +83,7 @@ describe('guest app', () => {
     const rn = uniq('G').slice(0, 8); const ci = await P(ubud, `/bookings/${bookingId}/check-in`, { roomNumber: rn }); expect(ci.status, JSON.stringify(ci.body)).toBe(200);
     const sem = (await G(semi, '/hotel/room-types', { limit: 1 })).body.data[0];
     const f = await P(semi, '/bookings', { product: 'HOTEL', roomTypeId: sem.id, checkIn: day(0), checkOut: day(1), rooms: 1, adults: 1, guestName: 'Other Guest', confirm: true });
-    foreign = f.body.data.bookingNo;
+    foreign = f.body.data.bookingNo; foreignId = f.body.data.id;
   });
   it('signs in only with the booking number and the guest name', async () => {
     expect((await api().post('/api/v1/guest/auth').send({ bookingNo, lastName: 'Wrongname' })).status).toBe(401);
@@ -116,6 +119,14 @@ describe('guest app', () => {
     const o = await api().post('/api/v1/guest/auth').send({ bookingNo: foreign, lastName: 'Guest' }); expect(o.status).toBe(200);
     expect((await gg('/requests', o.body.data.token)).body.data.length).toBe(0);
     expect((await gg('/bookings', o.body.data.token)).body.data.every((b: any) => b.bookingNo === foreign)).toBe(true);
+  });
+  it('refuses an ambiguous sign-in when two hotels share a booking number, and an email settles it', async () => {
+    const u = await withDb({ role: 'SUPER_ADMIN', supplierId: null }, (t) => t.booking.updateMany({ where: { id: foreignId }, data: { bookingNo, guestName: 'Ayu Gunawan', guestEmail: 'other@example.test' } })); expect(u.count).toBe(1);
+    const a = await api().post('/api/v1/guest/auth').send({ bookingNo, lastName: 'Gunawan' });
+    expect(a.status, JSON.stringify(a.body)).toBe(409); expect(a.body.message).toMatch(/email/i); expect(a.body.data?.token).toBeUndefined();
+    const mine = await api().post('/api/v1/guest/auth').send({ bookingNo, lastName: 'Gunawan', email: 'AYU@example.test' }); expect(mine.status, JSON.stringify(mine.body)).toBe(200);
+    expect((await gg('/me', mine.body.data.token)).body.data.guestName).toBe('Ayu Gunawan');
+    expect((await api().post('/api/v1/guest/auth').send({ bookingNo, lastName: 'Gunawan', email: 'nobody@example.test' })).status).toBe(401);
   });
   it('room dining: the server prices the order and refuses unavailable items', async () => {
     const it1 = (await P(ubud, '/ops/dining/items', { category: 'Test', name: uniq('Soup'), price: 40000 })).body.data;

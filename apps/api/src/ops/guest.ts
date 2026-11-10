@@ -38,8 +38,9 @@ async function stay(t: T, g: GuestCtx) {
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 15, standardHeaders: true, legacyHeaders: false, skip: () => config.NODE_ENV === 'test' });
 guestRouter.post('/guest/auth', authLimiter, async (req, res, next) => {
   try {
-    const b = z.object({ bookingNo: z.string().trim().min(4).max(30), lastName: z.string().trim().min(2).max(80) }).strict().parse(req.body);
-    const rows = await withSystem((t) => t.$queryRaw<{ booking_id: string; supplier_id: string; guest_name: string; room_number: string | null; hotel_id: string | null }[]>`SELECT * FROM guest_find_stay(${b.bookingNo}, ${b.lastName})`);
+    const b = z.object({ bookingNo: z.string().trim().min(4).max(30), lastName: z.string().trim().min(2).max(80), email: z.string().trim().toLowerCase().email().max(254).optional() }).strict().parse(req.body);
+    const rows = await withSystem((t) => t.$queryRaw<{ booking_id: string; supplier_id: string; guest_name: string; room_number: string | null; hotel_id: string | null }[]>`SELECT * FROM guest_find_stay(${b.bookingNo}, ${b.lastName}, ${b.email ?? null})`);
+    if (rows.length > 1) throw conflict(b.email ? 'We could not tell these stays apart online. Please ask the front desk to sign you in.' : 'More than one stay matches. Please also enter the email address used for the booking.');
     const r = rows[0];
     if (!r) throw unauthorized('We could not find a current stay with those details');
     const token = await new SignJWT({ sid: r.supplier_id, hid: r.hotel_id ?? '', name: r.guest_name }).setProtectedHeader({ alg: 'HS256' }).setSubject(r.booking_id).setIssuer(ISS).setAudience(AUD).setIssuedAt().setExpirationTime(`${config.GUEST_TOKEN_HOURS}h`).sign(key);
