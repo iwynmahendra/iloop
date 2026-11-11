@@ -72,6 +72,48 @@ This starts PostgreSQL, applies the migrations, loads the demo seed (`RUN_SEED=f
 
 Not yet tested against a real Supabase project: only local Postgres 16 has been used, so run the check above once.
 
+### Demo on Vercel (Hobby) + Supabase
+
+`vercel.json` deploys everything to one Vercel project: the API runs as one serverless function (`api/index.js`), and the seven web apps are static files under `/<app>/` on the same domain (the auth cookies are `SameSite=Strict`, so this matters). Vercel has no background timers, so Supabase `pg_cron` calls `/api/v1/cron/run` once a minute instead. That endpoint runs the hold sweeper, email sender and integration worker once.
+
+1. Supabase: follow the checklist above (migrations, `roles.sql`, Data API closed, seed). Set the database timezone to UTC (the default).
+2. Supabase Storage: create a **public** bucket (e.g. `media`). Under Storage, Settings, S3 Connection, create an access key.
+3. Vercel: import the repo with no framework preset. `vercel.json` sets the build. Add these env vars (Production):
+
+| Variable | Value |
+|---|---|
+| `NODE_ENV` | `production` |
+| `DATABASE_URL` | pooled URL as `app_runtime` (`...pooler.supabase.com:6543/postgres?pgbouncer=true`) |
+| `DIRECT_URL` | direct URL (only Prisma reads it; the app does not connect with it) |
+| `JWT_ACCESS_SECRET`, `CRON_SECRET` | two different random strings, 32+ characters (`openssl rand -base64 48`) |
+| `COOKIE_SECURE` | `true` |
+| `TRUST_PROXY` | `1` |
+| `CORS_ORIGIN`, `APP_URL` | `https://<project>.vercel.app` |
+| `STORAGE_DRIVER` | `s3` |
+| `S3_ENDPOINT` | `https://<ref>.supabase.co/storage/v1/s3` |
+| `S3_REGION` | the project region shown on the S3 Connection page |
+| `S3_BUCKET` | `media` |
+| `S3_ACCESS_KEY`, `S3_SECRET_KEY` | the key from step 2 |
+| `S3_PUBLIC_URL` | `https://<ref>.supabase.co/storage/v1/object/public/media` |
+| `MAX_UPLOAD_MB`, `VITE_MAX_UPLOAD_MB` | `4` (Vercel rejects request bodies over 4.5 MB) |
+| `ANTHROPIC_API_KEY` | optional, for the guest assistant |
+
+4. After the first deploy, schedule the jobs in the Supabase SQL editor (Database, Extensions: enable `pg_cron` and `pg_net`):
+
+```sql
+select cron.schedule('booking-jobs', '* * * * *', $$
+  select net.http_post(
+    url := 'https://<project>.vercel.app/api/v1/cron/run',
+    headers := jsonb_build_object('Authorization', 'Bearer <CRON_SECRET>'),
+    body := '{}'::jsonb
+  );
+$$);
+```
+
+Check it with `select * from cron.job_run_details order by start_time desc limit 5;` and `select * from net._http_response order by created desc limit 5;` (status 200).
+
+Differences from the Docker setup: the jobs run every minute instead of every 10 to 60 seconds; the rate limit counts per function instance; a request may take at most 60 seconds. The Hobby plan is for non-commercial use only. For real use, move to Vercel Pro or run the Docker image.
+
 ### Ops board and Guest concierge
 
 - `apps/ops` (staff, `/ops/`) uses the admin shell and the same login. API: `/api/v1/ops/*` (tasks, guest requests with SLA, rooms, room dining, knowledge base, staff, shift notes, overview alerts).

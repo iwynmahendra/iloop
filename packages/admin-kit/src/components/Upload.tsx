@@ -6,7 +6,7 @@ import { api, ApiError } from '../lib/api';
 import { useDebounced } from '../hooks/useDebounced';
 import { Button, Input, Modal, Spinner } from './ui';
 
-export const MAX_MB = 5;
+export const MAX_MB = Number(import.meta.env.VITE_MAX_UPLOAD_MB) || 5; // keep equal to the API's MAX_UPLOAD_MB (4 on Vercel)
 const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 export interface Media { id: string; url: string; originalName: string; altText: string | null; folder: string | null; width: number | null; height: number | null; sizeBytes: number; deletedAt: string | null }
 
@@ -28,11 +28,19 @@ export function UploadZone({ folder, onDone }: { folder?: string; onDone?: (m: M
   };
   const upload = async () => {
     setBusy(true);
+    // One image per request: hosts like Vercel reject request bodies over 4.5 MB.
+    const done: Media[] = []; let sent = 0;
     try {
-      const fd = new FormData(); files.forEach((f) => fd.append('files', f.file)); if (folder) fd.set('folder', folder);
-      const r = await api<Media[]>('/shared/media-assets/upload', { method: 'POST', form: fd });
-      toast.success(`${r.data.length} image(s) uploaded`); setFiles([]); qc.invalidateQueries({ queryKey: ['media'] }); onDone?.(r.data);
-    } catch (e) { toast.error((e as ApiError).message); } finally { setBusy(false); }
+      for (const f of files) {
+        const fd = new FormData(); fd.append('files', f.file); if (folder) fd.set('folder', folder);
+        done.push(...(await api<Media[]>('/shared/media-assets/upload', { method: 'POST', form: fd })).data); sent++;
+      }
+      toast.success(`${done.length} image(s) uploaded`);
+    } catch (e) { toast.error((e as ApiError).message); } finally {
+      setFiles((p) => p.slice(sent)); // keep only the ones that did not upload, so a retry does not duplicate
+      if (done.length) { qc.invalidateQueries({ queryKey: ['media'] }); onDone?.(done); }
+      setBusy(false);
+    }
   };
   return (
     <div className="space-y-3">
