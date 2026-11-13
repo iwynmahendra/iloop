@@ -8,7 +8,7 @@ const bad = [];
     p.on('pageerror', e => bad.push('pageerror: ' + e.message.slice(0, 160)));
     p.on('response', r => { if (r.url().includes('/api/') && r.status() >= 400 && !r.url().includes('/auth/refresh')) bad.push(r.status() + ' ' + r.request().method() + ' ' + r.url().replace(U, '').slice(0, 100)); });
     return p; };
-  const step = async (name, fn) => { try { const r = await fn(); console.log('OK  ', name, r ?? ''); } catch (e) { console.log('FAIL', name, e.message.split('\n')[0].slice(0, 200)); } };
+  const step = async (name, fn) => { try { const r = await fn(); console.log('OK  ', name, r ?? ''); } catch (e) { console.log('FAIL', name, e.message.split('\n')[0].slice(0, 200)); process.exitCode = 1; } };
   const login = async (p, app, email) => { await p.goto(`${U}/${app}/login`); await p.fill('input[type=email]', email); await p.fill('input[type=password]', 'ChangeMe!2026'); await p.click('button[type=submit]'); await p.waitForURL(new RegExp(`/${app}/?$`), { timeout: 8000 }); };
   const p = await mk();
   await step('hotel login + home', async () => { await login(p, 'hotel', 'admin@ubud.example'); await p.waitForSelector('dl'); await p.screenshot({ path: SP + '/h1-home.png' }); return (await p.locator('dd').allTextContents()).join(',').slice(0, 80); });

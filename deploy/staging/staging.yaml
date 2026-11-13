@@ -1,0 +1,103 @@
+# Throwaway staging stack for CI: Postgres + migrate/seed + app + test jobs. __IMAGE__ is replaced by the workflow.
+# Secrets (db-secret, app-secret) and the roles ConfigMap are created by the workflow, never stored here.
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: db }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: db } }
+  template:
+    metadata: { labels: { app: db } }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          env:
+            - { name: POSTGRES_USER, value: postgres }
+            - { name: POSTGRES_DB, value: booking }
+            - { name: POSTGRES_PASSWORD, valueFrom: { secretKeyRef: { name: db-secret, key: owner } } }
+            - { name: APP_DB_PASSWORD, valueFrom: { secretKeyRef: { name: db-secret, key: app } } }
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "postgres", "-d", "booking"] }
+            periodSeconds: 3
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+            - { name: roles, mountPath: /roles.sql, subPath: roles.sql }
+            - { name: roles, mountPath: /docker-entrypoint-initdb.d/10-roles.sh, subPath: init-roles.sh }
+      volumes:
+        - { name: data, emptyDir: {} }
+        - { name: roles, configMap: { name: roles, defaultMode: 0755 } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: db }
+spec:
+  selector: { app: db }
+  ports: [{ port: 5432 }]
+---
+apiVersion: batch/v1
+kind: Job
+metadata: { name: migrate }
+spec:
+  backoffLimit: 6
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: __IMAGE__
+          command: ["sh", "-c", "npx prisma migrate deploy && npx tsx prisma/seed.ts && npx tsx prisma/seed-ops.ts"]
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://postgres:$(OWNER)@db:5432/booking"
+            - name: DIRECT_URL
+              value: "postgresql://postgres:$(OWNER)@db:5432/booking"
+            - { name: OWNER, valueFrom: { secretKeyRef: { name: db-secret, key: owner } } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: app }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: app } }
+  template:
+    metadata: { labels: { app: app } }
+    spec:
+      containers:
+        - name: app
+          image: __IMAGE__
+          ports: [{ containerPort: 4000 }]
+          env:
+            - { name: APP_PW, valueFrom: { secretKeyRef: { name: db-secret, key: app } } }
+            - { name: DATABASE_URL, value: "postgresql://app_runtime:$(APP_PW)@db:5432/booking" }
+            - { name: JWT_ACCESS_SECRET, valueFrom: { secretKeyRef: { name: app-secret, key: jwt } } }
+            - { name: CORS_ORIGIN, value: "http://127.0.0.1:4000" }
+            - { name: APP_URL, value: "http://127.0.0.1:4000" }
+            - { name: COOKIE_SECURE, value: "false" }
+          readinessProbe:
+            httpGet: { path: /health, port: 4000 }
+            periodSeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata: { name: app }
+spec:
+  selector: { app: app }
+  ports: [{ port: 4000 }]
+---
+# API test suite, run inside the image against the seeded staging database.
+apiVersion: batch/v1
+kind: Job
+metadata: { name: api-tests }
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: tests
+          image: __IMAGE__
+          command: ["npm", "run", "test:api"]
+          env:
+            - { name: APP_PW, valueFrom: { secretKeyRef: { name: db-secret, key: app } } }
+            - { name: DATABASE_URL, value: "postgresql://app_runtime:$(APP_PW)@db:5432/booking" }

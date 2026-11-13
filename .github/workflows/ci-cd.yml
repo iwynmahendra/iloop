@@ -1,0 +1,115 @@
+# push -> build image -> staging on the home server (k3s) -> API tests + browser e2e -> deploy to the Hostinger VPS (main only).
+# Triggers on push only, never pull_request: the staging job runs on a self-hosted runner and must not run fork code.
+name: ci-cd
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  staging:
+    runs-on: [self-hosted, linux, staging]
+    timeout-minutes: 30
+    outputs:
+      image: ${{ steps.img.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: img
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        env:
+          IMAGE: ${{ steps.img.outputs.image }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Fresh staging namespace
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          kubectl delete ns staging --ignore-not-found --wait
+          kubectl create ns staging
+          kubectl -n staging create secret generic db-secret --from-literal=owner="$(openssl rand -hex 16)" --from-literal=app="$(openssl rand -hex 16)"
+          kubectl -n staging create secret generic app-secret --from-literal=jwt="$(openssl rand -hex 32)"
+          kubectl -n staging create configmap roles --from-file=roles.sql=prisma/sql/roles.sql --from-file=init-roles.sh=docker/init-roles.sh
+          kubectl -n staging create secret docker-registry ghcr --docker-server=ghcr.io --docker-username="$GITHUB_ACTOR" --docker-password="$TOKEN"
+          kubectl -n staging patch serviceaccount default -p '{"imagePullSecrets":[{"name":"ghcr"}]}'
+
+      - name: Deploy staging
+        env:
+          IMAGE: ${{ steps.img.outputs.image }}
+        run: |
+          sed "s|__IMAGE__|$IMAGE|g" deploy/staging/staging.yaml | kubectl -n staging apply -f -
+          kubectl -n staging rollout status deploy/db --timeout=180s
+          kubectl -n staging wait --for=condition=complete job/migrate --timeout=300s
+          kubectl -n staging rollout status deploy/app --timeout=180s
+
+      - name: API tests
+        run: |
+          # Wait for either outcome; a plain "wait complete" would sit out the full timeout when the job fails.
+          for _ in $(seq 1 120); do
+            s=$(kubectl -n staging get job api-tests -o jsonpath='{.status.succeeded}/{.status.failed}')
+            [ "${s%/*}" = 1 ] && break
+            [ -n "${s#*/}" ] && { kubectl -n staging logs job/api-tests --tail=80; exit 1; }
+            sleep 5
+          done
+          kubectl -n staging logs job/api-tests --tail=15
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Browser e2e
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pw" playwright
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install chromium
+          kubectl -n staging port-forward svc/app 4000:4000 &
+          sleep 3
+          export NODE_PATH="$RUNNER_TEMP/pw/node_modules" SHOTS="$RUNNER_TEMP"
+          # Both scripts exit 1 when any step fails.
+          node tools/e2e/apps.cjs
+          node tools/e2e/ops-guest.cjs
+
+      - name: Staging logs on failure
+        if: failure()
+        run: |
+          kubectl -n staging get pods
+          kubectl -n staging logs deploy/app --tail=100 || true
+          kubectl -n staging logs job/migrate --tail=50 || true
+
+      - name: Tear down staging
+        if: always()
+        run: kubectl delete ns staging --ignore-not-found --wait=false
+
+  production:
+    needs: staging
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to the VPS
+        env:
+          IMAGE: ${{ needs.staging.outputs.image }}
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          TARGET: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id; chmod 600 ~/.ssh/id
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          scp -i ~/.ssh/id deploy/prod/compose.yml "$TARGET:/opt/iloop/docker-compose.yml"
+          scp -i ~/.ssh/id deploy/prod/Caddyfile deploy/prod/deploy.sh "$TARGET:/opt/iloop/"
+          ssh -i ~/.ssh/id "$TARGET" "cd /opt/iloop && IMAGE='$IMAGE' bash ./deploy.sh"

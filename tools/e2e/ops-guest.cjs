@@ -1,6 +1,6 @@
 const { chromium } = require('playwright');
 const B = 'http://127.0.0.1:4000'; const probs = [];
-const log = (ok, n, x = '') => console.log(`${ok ? 'OK  ' : 'FAIL'} ${n} ${x}`);
+const log = (ok, n, x = '') => { if (!ok) process.exitCode = 1; console.log(`${ok ? 'OK  ' : 'FAIL'} ${n} ${x}`); }
 async function step(n, f) { try { const r = await f(); log(true, n, r ?? ''); } catch (e) { log(false, n, String(e.message).split('\n')[0]); } }
 (async () => {
   const br = await chromium.launch();

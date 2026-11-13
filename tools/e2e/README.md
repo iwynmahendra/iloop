@@ -7,4 +7,4 @@ node tools/e2e/apps.cjs        # five admin apps: login, bookings, check-in, int
 node tools/e2e/ops-guest.cjs   # Ops board + guest app end to end (guest uses demo booking HTL-2610-0003 / Rossi)
 ```
 
-Set `SHOTS=<folder>` for screenshots. Needs `playwright` installed. The scripts leave test bookings and one `E2E PMS` connection behind: delete the connection before running `apps.cjs` again (it hits a unique constraint otherwise). Not yet part of CI.
+Set `SHOTS=<folder>` for screenshots. Needs `playwright` installed. The scripts leave test bookings and one `E2E PMS` connection behind: delete the connection before running `apps.cjs` again (it hits a unique constraint otherwise). Both exit 1 when a step fails; `.github/workflows/ci-cd.yml` runs them against staging.
